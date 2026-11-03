@@ -1,0 +1,13 @@
+# 数据不入库：音频、打包文件、临时产物
+data/
+pack/
+*.tar.gz
+*.zip
+*.lz4
+*.wav
+*.flac
+
+# 运行产物（reports/ 与 predictions/ 里的示例结果是有意入库的，不加黑）
+__pycache__/
+*.pyc
+.DS_Store
