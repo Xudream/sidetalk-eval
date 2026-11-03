@@ -37,15 +37,15 @@ shasum -a 256 -c SHA256SUMS
 mkdir -p data && tar -xzf chorus.tar.gz -C data && tar -xzf humdial.tar.gz -C data && tar -xzf wearvox.tar.gz -C data
 ```
 
-解包后目录与 `manifests/*.jsonl` 里的 `audio_root` 对应关系：
+包内路径与清单里的 `audio` 字段一一对应，解包到 `data/` 即可：
 
-| 包 | 解包后需要挪到 | `audio_root` 应为 |
+| 包 | 解包后 | 清单里 `audio` 形如 |
 |---|---|---|
-| chorus | `data/chorus/` | `data/chorus/audio` |
-| wearvox | `data/wearvox/` | `data/wearvox/wav` |
-| humdial | `data/humdial/` | `data/humdial/talk_to_others` 等 5 个目录 |
+| chorus | `data/chorus/` | `audio/side_talk-0001.flac` |
+| wearvox | `data/wearvox/` | `wav/GH8w-....wav` |
+| humdial | `data/humdial/` | `talk_to_others/0006_0011_add.wav` |
 
-> `audio_root` 是绝对路径，换机器后需要重跑 `build_manifests.py` 刷新（脚本会按 `--data` 重写）。
+> 仓库里的 `audio_root` 是**相对路径**（`data/chorus`、`data/wearvox`、`data/humdial`），解包到 `data/` 后可直接用。若你的数据放在别处，重跑 `build_manifests.py --data <你的路径>` 会自动重写。
 
 ### B. 重新下载（推荐，格式与官方一致）
 
