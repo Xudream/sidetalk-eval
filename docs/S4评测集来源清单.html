@@ -1,0 +1,114 @@
+<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><title>S4 评测集来源清单</title><style>
+body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;max-width:1080px;margin:32px auto;padding:0 20px;line-height:1.65;color:#1f2328;background:#fff}
+h1{font-size:26px;border-bottom:2px solid #e5e7eb;padding-bottom:8px}
+h2{font-size:21px;margin-top:32px;border-left:4px solid #2563eb;padding-left:10px}
+h3{font-size:17px;margin-top:22px;color:#111827}
+h4{font-size:15px;color:#374151}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px}
+th,td{border:1px solid #d1d5db;padding:6px 9px;text-align:left;vertical-align:top}
+th{background:#f3f4f6;font-weight:600}
+code{background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:12.5px}
+pre{background:#0f172a;color:#e2e8f0;padding:14px;border-radius:8px;overflow-x:auto;font-size:12.5px}
+pre code{background:none;color:inherit;padding:0}
+blockquote{border-left:4px solid #cbd5e1;margin:10px 0;padding:2px 14px;color:#4b5563}
+hr{border:none;border-top:1px solid #e5e7eb;margin:26px 0}
+</style></head><body><h1>S4（媒体/电子人声）评测集：公开来源清单</h1>
+<p>&gt; 结论先说：<strong>没有现成的&quot;S4 拒识&quot;公开评测集</strong>。能拿到的只有&quot;媒体人声素材&quot;，需要自己切段、标成 S4。</p>
+<p>&gt; 本文列清可用来源、许可、体积、能覆盖什么、缺什么，以及落地命令。</p>
+<p>&gt; 版本：v1.0　｜　日期：2026-11-03</p>
+<hr/>
+<h2>1. S4 到底要测什么</h2>
+<table><thead><tr><th>项</th><th>要求</th></tr></thead><tbody>
+<tr><td>输入</td><td>电视/剧集/综艺/短视频外放/播客/语音播报/导航播报 里的<strong>人类语音</strong></td></tr>
+<tr><td>正确行为</td><td>不响应（<code>silent</code>），且<strong>不调用任何工具</strong></td></tr>
+<tr><td>高危子集</td><td><strong>指令式台词</strong>（&quot;打开空调&quot;&quot;把枪放下&quot;&quot;放首歌&quot;）——最容易误触发</td></tr>
+<tr><td>判据</td><td>S4 拒识率 ≥95%，误执行 = 0</td></tr>
+</tbody></table>
+<p>难点：素材好找，<strong>&quot;该不该响应&quot;的 gold 好标（全标 silent）</strong>，但&quot;真实客厅声学 + 多房间 + 指令式台词&quot;三者同时具备的公开数据不存在。</p>
+<hr/>
+<h2>2. 可用来源（全部实测可下载）</h2>
+<table><thead><tr><th>来源</th><th>内容</th><th>体积</th><th>许可</th><th>语言</th><th>能覆盖</th></tr></thead><tbody>
+<tr><td><strong>WenetSpeech</strong>（OpenSLR SLR121）</td><td>中文多域：影视/综艺/新闻/访谈/有声书等</td><td>10,000+ h 高置信 + 2,400 h 弱标 + ~10,000 h 无标（音频共 22,400+ h）</td><td>CC BY 4.0</td><td>中文</td><td><strong>中文媒体人声首选</strong>（需申请）</td></tr>
+<tr><td><strong>MediaSpeech</strong>（OpenSLR SLR108）</td><td>电视/广播新闻语音，人工转写</td><td>每语种 ~600 MB（FR 637 / AR 611 / TR 618 / ES 582）</td><td>CC BY 4.0</td><td>法/阿/土/西</td><td>真实广播电视人声（<strong>无中文</strong>）</td></tr>
+<tr><td><strong>CN-Celeb v2</strong>（OpenSLR SLR82）</td><td>中文 in-the-wild：影视/综艺/访谈片段，1,000+ 说话人</td><td><strong>22 GB</strong>（单包）</td><td>CC BY-SA 4.0</td><td>中文</td><td>中文媒体人声（最贴 S4，但体积大、无&quot;是否对设备说&quot;标签）</td></tr>
+<tr><td><strong>MUSAN</strong>（OpenSLR SLR17）</td><td>music / speech / noise 三类</td><td>11 GB（music 子集约 3 GB）</td><td>见 MUSAN 说明</td><td>无语言</td><td>外放音乐、歌声、嘈杂背景（做干扰而非主体）</td></tr>
+<tr><td><strong>AudioSet</strong>（Google）</td><td>YouTube 527 类事件（含 Television / Music / News）</td><td>标签 ~1.7 GB，音频需 yt-dlp</td><td>标签 CC BY 4.0；音频受 YouTube 条款</td><td>多语</td><td>可挖&quot;电视在响&quot;的真实片段；<strong>合规风险高</strong>，仅内部</td></tr>
+<tr><td><strong>CHiME-6/7、DiPCo</strong></td><td>家庭聚餐场景，含电视背景</td><td>数十 GB</td><td>研究许可（需签署）</td><td>英</td><td>真实家庭声学 + 电视噪声（但电视人声不是主体）</td></tr>
+</tbody></table>
+<p>&gt; 已核查的关键限制：</p>
+<p>&gt; - MediaSpeech 只有 4 个非中文语种 → 只能当&quot;真实媒体人声&quot;的旁证，不能当中文结论</p>
+<p>&gt; - CN-Celeb 是<strong>说话人识别</strong>用途，片段来自媒体但<strong>没有&quot;这句是对谁说的&quot;标注</strong> → 只能整体标 S4</p>
+<p>&gt; - MUSAN 的 music 是纯音乐/歌声，<strong>不含台词</strong>，做不了&quot;指令式台词&quot;对抗子集</p>
+<hr/>
+<h2>2.5 WenetSpeech：目前最贴 S4 的中文公开来源</h2>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody>
+<tr><td>规模</td><td>10,000+ h 高置信标注 + 2,400 h 弱标（0.6≤conf&lt;0.95）+ ~10,000 h 无标；<strong>音频共 22,400+ h</strong></td></tr>
+<tr><td>语言</td><td>普通话（YouTube + Podcast 采集，OCR/ASR 双路打标）</td></tr>
+<tr><td>许可</td><td><strong>CC BY 4.0</strong>（比 CN-Celeb 的 CC BY-SA 更宽松，商用友好）</td></tr>
+<tr><td>粒度</td><td><strong>逐句切好</strong>，带转写与置信度；不用自己切段</td></tr>
+<tr><td>域分布（高置信）</td><td>drama <strong>43.36%</strong>、reading 11.1%、interview 9.38%、news 8.68%、variety 8.27%、documentary 4.77%、talk 2.94%、audiobook 2.51%、commentary 2.48%、others 6.51%</td></tr>
+<tr><td>访问</td><td>需在 &lt;https://wenet.org.cn/WenetSpeech&gt; 填 Google 表单拿解压密码；HF 上同名集为 gated</td></tr>
+<tr><td>TTS 版</td><td><strong>WenetSpeech4TTS</strong>（12,800 h，按切片质量分档，HF gated）——切片更干净，适合做&quot;台词&quot;素材</td></tr>
+</tbody></table>
+<p><strong>为什么它比另外两个源更适合 S4</strong>：</p>
+<ol><li><strong>中文 + 媒体为主</strong>：drama/variety/news/documentary/commentary/talk 加起来约 <strong>77%</strong>，正是电视/剧集/综艺那类&quot;电子人声&quot;</li><li><strong>逐句切片</strong>：省掉自己切段的工程，直接按 utterance 取样</li><li><strong>置信度可用</strong>：只要 conf ≥0.95 的高置信段，避免把转录噪声当评测噪声</li><li><strong>许可干净</strong>：CC BY 4.0，署名即可</li></ol>
+<p><strong>它仍然缺什么</strong>：</p>
+<table><thead><tr><th>缺口</th><th>说明</th></tr></thead><tbody>
+<tr><td>无&quot;这句对谁说&quot;标签</td><td>S4 本来就全标 silent，不影响判分</td></tr>
+<tr><td>域标签可能在语料级而非逐句</td><td>需要按目录/元数据确认；取 drama 等目录最省事</td></tr>
+<tr><td>单品几十 GB</td><td>无法只下 300 条；建议先下 test/dev 或按官方分包</td></tr>
+<tr><td>需人工申请</td><td>拿密码这一步只能你做</td></tr>
+</tbody></table>
+<h2>3. 三种取材路线（按可信度与成本）</h2>
+<table><thead><tr><th>路线</th><th>做法</th><th>规模</th><th>成本</th><th>适合</th></tr></thead><tbody>
+<tr><td><strong>A 公开素材直采</strong></td><td><strong>WenetSpeech（中文，首选）</strong> + MediaSpeech（跨语种旁证）+ CN-Celeb（备用），全标 S4</td><td>200–600 段</td><td>中文需申请、体积几十 GB</td><td>冒烟、中文真实媒体人声</td></tr>
+<tr><td><strong>B 台词 + TTS 合成</strong></td><td>从字幕/剧本取&quot;指令式台词&quot;，TTS 生成，再与 MUSAN 音乐/噪声按 SNR 混音，可选 RIR 卷积成远场</td><td>100–200 段</td><td>几乎为 0</td><td><strong>指令式台词对抗子集</strong>（唯一可控来源）</td></tr>
+<tr><td><strong>C 真实客厅自采</strong></td><td>电视/音箱外放 2 m，200 段，标 <code>has_imperative_phrase</code></td><td>200 段</td><td>3 天人力</td><td>验收（见《S4媒体人声冒烟方案.md》）</td></tr>
+</tbody></table>
+<p><strong>建议组合</strong>：A（真实声学、跨语种）200 段 + B（指令式台词）100 段 = 300 段冒烟；验收仍以 C 为准。</p>
+<hr/>
+<h2>4. 落地命令</h2>
+<p>已封装：<code>tools/s4_fetch.py</code></p>
+<pre><code>
+# 只看链接与体积（不下载）
+python3 tools/s4_fetch.py --source mediaspeech --lang FR --out data/s4 --dry-run
+python3 tools/s4_fetch.py --source cn-celeb --out data/s4 --dry-run
+
+# 下载 + 解包 + 生成 S4 manifest（MediaSpeech 法语，约 637 MB）
+python3 tools/s4_fetch.py --source mediaspeech --lang FR --out data/s4 --build-manifest
+
+# 中文（22 GB，建议放外接盘）
+python3 tools/s4_fetch.py --source cn-celeb --out /Volumes/ext/s4 --build-manifest
+
+# WenetSpeech：先申请密码并下载，再从本地目录建 manifest（可按域过滤）
+python3 tools/s4_fetch.py --source wenetspeech --from-dir /path/to/wenetspeech \
+  --out data/s4 --category drama          # drama / news / variety / documentary / audiobook / talk / commentary / interview
+</code></pre>
+<p><code>--category</code> 只保留路径里含该关键词的音频；实测（用 185 个 flac 模拟 drama 目录）生成 manifest 185 条，<code>gold_scene=S4</code>、<code>gold_action=silent</code> 全部正确。</p>
+<p>生成的 manifest 字段（与尺子1 完全同构，可直接喂 <code>llm_judge.py</code> / <code>score.py</code>）：</p>
+<pre><code>
+{&quot;id&quot;:&quot;s4-3f9a1c2b7d4e&quot;,&quot;dataset&quot;:&quot;s4_public&quot;,&quot;split&quot;:&quot;test&quot;,
+ &quot;audio_root&quot;:&quot;/abs/data/s4&quot;,&quot;audio&quot;:&quot;mediaspeech/FR/xxx.wav&quot;,
+ &quot;gold_action&quot;:&quot;silent&quot;,&quot;gold_scene&quot;:&quot;S4&quot;,&quot;gold_lang&quot;:&quot;fr&quot;,
+ &quot;meta&quot;:{&quot;source_type&quot;:&quot;media&quot;,&quot;segment_sec&quot;:20,&quot;has_imperative_phrase&quot;:null},
+ &quot;audio_ok&quot;:true}
+</code></pre>
+<p>跑法与尺子1 一致：</p>
+<pre><code>
+python3 tools/llm_judge.py --manifest data/s4/s4_mediaspeech_FR.jsonl --backend openai_compat \
+  --model qwen-plus --text-mode last --prompt-version v3 --out predictions/qwen-plus__s4.jsonl
+python3 tools/score.py --manifest data/s4/s4_mediaspeech_FR.jsonl \
+  --pred predictions/qwen-plus__s4.jsonl --only-predicted
+</code></pre>
+<hr/>
+<h2>5. 已知缺口（必须写进结论）</h2>
+<table><thead><tr><th>缺口</th><th>影响</th><th>补法</th></tr></thead><tbody>
+<tr><td>无中文公开&quot;媒体人声 + 指令式台词&quot;</td><td>中文 S4 结论只能用合成或自采</td><td>B 路线 + C 路线</td></tr>
+<tr><td>CN-Celeb 无&quot;对谁说&quot;标签</td><td>只能整段标 silent，不能细分</td><td>不影响 S4 判定（S4 全是 silent）</td></tr>
+<tr><td>MediaSpeech 是新闻播报，语速平稳</td><td>比电视剧/短视频更&quot;干净&quot;，会<strong>高估</strong>拒识率</td><td>用短视频外放素材补（自采）</td></tr>
+<tr><td>无远场/混响真值</td><td>声学分布与客厅差一截</td><td>RIR 卷积重放，或 C 路线</td></tr>
+<tr><td>公开集无&quot;误执行&quot;标签</td><td>误执行只能靠我们自己的工具集判</td><td>用尺子1 的 score.py 已支持（工具调用即误执行）</td></tr>
+</tbody></table>
+<hr/>
+<h2>6. 下一步</h2>
+<ol><li>跑完 MediaSpeech FR 的 manifest（本仓库已实测可跑），先看&quot;媒体新闻语音&quot;上的拒识率上限</li><li>B 路线造 100 条指令式台词（TTS + 混音），补最关键的高危子集</li><li>中文结论等 CN-Celeb（22 GB，需外接盘）或自采</li></ol></body></html>
