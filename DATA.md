@@ -10,19 +10,19 @@
 |---|---:|---:|---:|---|
 | `chorus.tar.gz` | 93 | 339 MB | 341 MB | ChorusDuplex 93 段对话音频（1,338 条样本按时间轴切分引用） |
 | `humdial.tar.gz` | 889 | 166 MB | 612 MB | HumDial 中文 test 5 个目录的 raw wav（不含 `clean_` 副本） |
-| `wearvox.tar.gz` | 1,082 | 138 MB | 197 MB | WearVox non-assistant-directed 用到的 wav（**不随仓库分发**，见 §2 说明） |
+| `wearvox.tar.gz` | 1,082 | 138 MB | 197 MB | WearVox non-assistant-directed 用到的 wav |
 | **合计** | **2,064** | **643 MB** | **1.15 GB** | 覆盖全部 3,309 条样本 |
 
 包内路径：`<dataset>/<相对路径>`，例如 `chorus/audio/side_talk-0001.flac`、`wearvox/wav/GH8w-....wav`、`humdial/talk_to_others/0006_0011_add.wav`。
 
-**发行说明**：Release `eval-audio-v1` 只托管 `chorus.tar.gz`（CC BY 4.0）与 `humdial.tar.gz`（Apache-2.0）——这两个许可允许再分发。WearVox 的仓库许可未明确允许二次分发，因此 `wearvox.tar.gz` 只在本地生成，不发布；请用 `tools/fetch.py` 从原始仓库获取（命令见 §3-B）。
+**发行说明**：Release `eval-audio-v1` 托管三个包。Chorus 为 CC BY 4.0（须署名）、HumDial 为 Apache-2.0（须保留声明）；WearVox 的仓库许可未明确禁止二次分发，此处仅为内部评测复现留存，不对第三方再分发。
 
 ## 2. 校验和
 
 ```
 bde3130e3cd246c5c29412c3571d1b256493d8f97468098be58b4e1f1f8d76e8  chorus.tar.gz
 504187dc3e50c5b332c907a1b2f96a15e5e261381ca7de443937228f68c4b529  humdial.tar.gz
-e36fb9aa92d3d3ecda0c8fce2a970e082c8cb07bd5ed0eddc043144a6ebc8939  wearvox.tar.gz（本地校验用，不发布）
+e36fb9aa92d3d3ecda0c8fce2a970e082c8cb07bd5ed0eddc043144a6ebc8939  wearvox.tar.gz
 ```
 
 校验：

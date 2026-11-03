@@ -33,7 +33,7 @@ HTML 版与 md 同名，直接打开即可。
 
 - 清单在 `manifests/`（JSONL，含样本 ID、场景标签、转写、`audio_root`）
 - 音频不入库，两种获取方式：
-  - **Release 资产**：`eval-audio-v1`（chorus + humdial 两个包 + SHA256SUMS；WearVox 因许可不明不随仓库分发，用 fetch.py 取）
+  - **Release 资产**：`eval-audio-v1`（chorus / wearvox / humdial 三个 tar.gz + SHA256SUMS，共 643 MB，覆盖 2,064 个文件）
   - **重新下载**：`tools/fetch.py`（见 `DATA.md` §3）
 - 三个公开集来源：`BiggestWave/ChorusDuplex-SideTalk`（CC BY 4.0）、`zlinao/WearVox`、`ASLP-lab/HumDial-FDBench`（Apache-2.0）
 
