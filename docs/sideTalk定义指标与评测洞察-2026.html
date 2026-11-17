@@ -1,0 +1,1047 @@
+<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><title>全双工交互中的 sideTalk：定义、指标与评测的产业界/学术界双视角洞察</title><style>
+body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;max-width:1080px;margin:32px auto;padding:0 20px;line-height:1.65;color:#1f2328;background:#fff}
+h1{font-size:26px;border-bottom:2px solid #e5e7eb;padding-bottom:8px}
+h2{font-size:21px;margin-top:32px;border-left:4px solid #2563eb;padding-left:10px}
+h3{font-size:17px;margin-top:22px;color:#111827}
+h4{font-size:15px;color:#374151}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px}
+th,td{border:1px solid #d1d5db;padding:6px 9px;text-align:left;vertical-align:top}
+th{background:#f3f4f6;font-weight:600}
+code{background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:12.5px}
+pre{background:#0f172a;color:#e2e8f0;padding:14px;border-radius:8px;overflow-x:auto;font-size:12.5px}
+pre code{background:none;color:inherit;padding:0}
+blockquote{border-left:4px solid #cbd5e1;margin:10px 0;padding:2px 14px;color:#4b5563}
+hr{border:none;border-top:1px solid #e5e7eb;margin:26px 0}
+</style></head><body><h1>全双工交互中的 sideTalk：定义、指标与评测的产业界/学术界双视角洞察</h1>
+<blockquote>
+<p>版本：2026-11-07 ｜ 用途：技术洞察报告素材 ｜ 数据分级：【官方】厂商一手发布　【论文】论文原文　【第三方】第三方评测/报道　【待核】口径不明或仅有二手转述</p>
+</blockquote>
+<hr />
+<h2>0. 一句话结论</h2>
+<p><strong>sideTalk 在学术界已经完成了四次定义迁移（谁在说 → 是否对设备说 → 该不该动 → 知道但不能说），而在产业界仍停留在"抗干扰"这一层能力叙事上——两边都能测"误响应"，但只有学界在测"为什么正确"（原因对齐）和"说了什么代价"（隐私泄露）。</strong></p>
+<p>三条支撑判断：</p>
+<ol>
+<li>学术界的指标已经从"行为分布"（FD-Bench v1.5，2025-07）演进到"意图对齐率"（CoDeTT 的 SMR，2026-03）和"理解与隐私的联合分"（SH-Bench 的 SE，ACL 2026）——<strong>从"做对没有"走向"为什么对"</strong>。【论文】</li>
+<li>产业界唯一规模化落地的是字节 Seeduplex，其公开成绩<strong>全部是相对值</strong>（误回复率减半、抢话比例 −40%、判停延迟 −250 ms），没有测试集、没有绝对分母。【官方】</li>
+<li>全球没有任何一个评测集同时给出"分场景拒识率 + 真指令漏检率 + 误执行 + 时延"四项——这是当前的空白，也是我们对外输出差异点的位置。</li>
+</ol>
+<hr />
+<h2>1. 先把定义钉死：sideTalk 是四层问题，不是一件事</h2>
+<h3>1.1 四种叫法与它们的出处</h3>
+<table>
+<thead>
+<tr>
+<th>叫法</th>
+<th>谁在用</th>
+<th>原始表述</th>
+<th>覆盖范围</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>side-talk / side conversation</td>
+<td>Meta、FD-Bench</td>
+<td>"user briefly addresses someone else while the model is speaking"【论文】</td>
+<td>说话对象切换（用户在跟旁人说话）</td>
+</tr>
+<tr>
+<td>抗干扰 / 指向性理解</td>
+<td>字节 Seeduplex</td>
+<td>"精准判断哪些是真正和模型交互的声音，哪些是干扰声"【官方】</td>
+<td>声学干扰 + 对象判断（混在一起）</td>
+</tr>
+<tr>
+<td>proactive audio</td>
+<td>Google Gemini Live</td>
+<td>"Lets you control when the model responds and in what contexts"【官方】</td>
+<td>模型自主决定是否响应</td>
+</tr>
+<tr>
+<td>拒识（Rejection）</td>
+<td>HumDial、国内厂商</td>
+<td>"在背景噪声中保持沉默的能力"（rejection capability）【论文】</td>
+<td>该静默时静默（含 sideTalk 与背景音）</td>
+</tr>
+</tbody>
+</table>
+<p>四种叫法<strong>不是同义词</strong>：side-talk 是场景，拒识是决策，抗干扰是能力，proactive audio 是产品开关。做横向对比时混用，就会得到"豆包误回复率减半 vs Gemini RESUME 0.99"这种无法对话的结论。</p>
+<h3>1.2 六个必须分开的相邻概念</h3>
+<ol>
+<li><strong>side-talk（对旁人说）</strong>：主用户的话轮里插入了对第三方的发言，不指向设备。</li>
+<li><strong>background speech（背景语音）</strong>：第三人称对话或广播声，声学上在场，但没有任何指向设备的意图。</li>
+<li><strong>self-talk（自言自语）</strong>：用户自己念叨指令内容，不构成请求。</li>
+<li><strong>speaker-switch（说话人切换）</strong>：词面完全相同，只有说话人或距离变了（VGBench 的核心控制变量）。【论文】</li>
+<li><strong>backchannel（附和）</strong>："嗯""对"这类不接管话轮的反馈，正确处理是<strong>继续说不被打断</strong>。</li>
+<li><strong>interruption（打断）</strong>：用户真的要接管话轮，正确处理是<strong>立即让位</strong>。</li>
+</ol>
+<p>后两者与 sideTalk 常被放进同一个评测（FD-Bench 四场景），但<strong>期望行为相反</strong>：附和与旁聊要求"不动"，打断要求"立刻动"。任何把它们混成一个准确率的评测，都会奖励错误策略。</p>
+<h3>1.3 三层定义（我们建议在报告里采用的框架）</h3>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>问题</th>
+<th>判定对象</th>
+<th>代表工作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1 声学层</td>
+<td>谁在说、从哪来说</td>
+<td>说话人 / 方向 / 距离</td>
+<td>WearVox（多通道眼镜）、MMW（多麦 Whisper）</td>
+</tr>
+<tr>
+<td>L2 对象层</td>
+<td>这句话是不是对设备说的</td>
+<td>受话人（addressee）</td>
+<td>DDSD、VGBench、HumDial-TPS/SDO</td>
+</tr>
+<tr>
+<td>L3 系统层</td>
+<td>该不该响应、该不该动作</td>
+<td>动作（静默/回答/工具）</td>
+<td>CoDeTT、SH-Bench、FD-Bench 行为分类</td>
+</tr>
+</tbody>
+</table>
+<p><strong>sideTalk 落在 L2，但验收必须看 L3。</strong> 这是本文最重要的一句结构判断：判对"没对我说"只是第一步，判完之后<strong>动作必须是 silent 或 silent_record</strong>，否则 L2 满分也等于失败。</p>
+<h3>1.4 我们自己的工作定义（S0–S4）</h3>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>定义</th>
+<th>应做动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S0</td>
+<td>主用户对设备的真指令（对照组）</td>
+<td>respond</td>
+</tr>
+<tr>
+<td>S0_guest</td>
+<td>访客对设备的指令</td>
+<td>respond（按业务决定是否鉴权）</td>
+</tr>
+<tr>
+<td>S1</td>
+<td>主用户对旁人说</td>
+<td>silent_record（静默但记上下文）</td>
+</tr>
+<tr>
+<td>S2</td>
+<td>旁人对主用户说</td>
+<td>silent</td>
+</tr>
+<tr>
+<td>S3</td>
+<td>旁人之间说</td>
+<td>silent</td>
+</tr>
+<tr>
+<td>S4</td>
+<td>媒体/电子人声（电视、导航、短视频）</td>
+<td>silent</td>
+</tr>
+</tbody>
+</table>
+<p>S1 必须是 silent_record 而不是纯 silent——这是"判对动作、用错协议"的典型坑：后续主用户说"刚才我说的那家店"，系统答不出来。</p>
+<hr />
+<h2>2. 学术界：定义的四个世代</h2>
+<h3>2.1 第一代（2018–2020）：Addressee Recognition——"他在跟谁说"</h3>
+<p>多人对话里判定"谁是被说话的对象"，为下一轮由谁接话服务。</p>
+<ul>
+<li>京都大学三方讨论语料（arXiv:2501.16643）：<strong>只有约 20% 的轮次存在显式受话人</strong>，其余靠韵律、视线、上下文推断；GPT-4o 做受话人识别<strong>仅略高于随机</strong>。【论文】</li>
+<li>意义：证明了"对象判定"本身是独立难题，不能寄望于 ASR 之后的文本模型顺手解决。</li>
+<li>局限：判定的是"人际之间"，没有"人—设备"这一层，也没有动作后果。</li>
+</ul>
+<h3>2.2 第二代（2018–2019）：DDSD——"这句话是不是对设备说的"</h3>
+<p>Amazon Alexa 把问题工程化为<strong>二分类</strong>：device-directed vs non-device-directed，输入声学特征 + ASR 解码器特征。</p>
+<ul>
+<li>数据规模：1st-turn 324K 条 / 2nd-turn 13K 条（Interspeech 2019）。【论文】</li>
+<li>指标：<strong>EER</strong>（等错误率，FPR = FNR 的那一点）。</li>
+<li>关键工程结论：<strong>按对话类型分输出分支</strong>比共享分支相对 EER 降 12.5%；attention pooling 比 mean pooling 相对降 4.97%。【论文】</li>
+<li>局限：只回答"是不是"，不回答"该做什么动作"；且论文只报相对改进，不报绝对 EER——这是产业界至今的通病，后面第 5 节会再遇到。</li>
+</ul>
+<h3>2.3 第三代（2025–2026）：Side-Talk Rejection / addressedness——"该不该动"</h3>
+<p>这一代把"对象判断"和"动作"绑在一起，诞生了三个不同颗粒度的基准：</p>
+<ol>
+<li><strong>WearVox</strong>（Meta，ICLR 2026，arXiv:2601.02391）：首个可穿戴多通道基准，任务直接叫 <strong>Side-Talk Rejection</strong>，3,842 段眼镜录音。指标是任务准确率，多通道相对单通道 <strong>85.6% → 93.9%（+8.3 pt）</strong>。【论文】</li>
+<li><strong>VGBench</strong>（arXiv:2609.32536，2026-09）：提出 <strong>action-level addressedness</strong>——不是判"是不是对我说的"，而是判"在这句话面前应该静默、调工具还是回答"。1,018 条，三类场景（side-talk / self-talk / speaker-switch），统一动作空间 <code>{silence, tool call, answer}</code>。核心发现：六个原始 Audio LLM <strong>能认出该调哪个工具，却几乎不静默</strong>，最高切换静默率只有 <strong>14%</strong>；后训练（VoxGate）把切换静默做到 <strong>91.3%</strong>，side-talk 准确率 68.4% → 70.9%，self-talk 静默 52.0% → 60.0%。【论文】</li>
+<li><strong>HumDial Track II</strong>（ICASSP 2026，arXiv:2601.05564）：把拒识拆成四类真实场景——URB（用户实时附和）、PH（停顿）、TPS（第三方说话）、SDO（对别人说话），测试集 2,000 条（600/600/600/200），且用<strong>真人演员录制</strong>而非合成混音。【论文】</li>
+</ol>
+<p>这一代的定义进步在于：<strong>承认"正确"取决于场景</strong>。同样是重叠，附和场景下"继续讲"才对，打断场景下"立刻停"才对。</p>
+<h3>2.4 第四代（2026）：Selective Hearing——"知道，但不能说"</h3>
+<p>SH-Bench（ACL 2026，arXiv:2512.06380）把 sideTalk 从"该不该响应"推到"该不该记忆/泄露"：</p>
+<ul>
+<li>3,968 段多说话人混合音频 + 77k 道五选一选择题（其中一个选项固定为 "I don't know"）。</li>
+<li>两种运行模式：general（都要答对）与 selective（<strong>旁观者相关问题必须答"不知道"</strong>）。</li>
+<li>提出 <strong>Selective Efficacy（SE）</strong>：四个准确率（主说话人/旁观者 × general/selective）的<strong>调和平均</strong>，任一维度差就会拉低总分。</li>
+<li>实测：Gemini 2.5 Pro 四个准确率 97.3 / 97.0 / 65.5 / 59.2 → SE <strong>75.8</strong>；GPT-4o-audio 72.3 / 84.4 / 43.2 / 44.5 → SE <strong>56.1</strong>；BPFT 微调后 Step-Audio-2-mini 97.4 / 94.3 / 81.0 / 96.1 → SE <strong>91.7</strong>（相对 Gemini 旁观者准确率 +47 绝对点、SE +16 绝对点）。【论文】</li>
+</ul>
+<p>定义上的关键跃迁：<strong>"听懂"和"该不该说"被拆成两个独立可测的维度</strong>，而且用一个联合分把"为了隐私而装聋"这种作弊路径堵住（general 准确率会掉下来）。</p>
+<h3>2.5 四个世代的一句话对照</h3>
+<table>
+<thead>
+<tr>
+<th>世代</th>
+<th>问题的形式</th>
+<th>输出</th>
+<th>指标</th>
+<th>盲点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>受话人识别</td>
+<td>他在对谁说</td>
+<td>人</td>
+<td>准确率</td>
+<td>不含设备、不含动作</td>
+</tr>
+<tr>
+<td>DDSD</td>
+<td>是否对设备说</td>
+<td>二分类</td>
+<td>EER</td>
+<td>不含动作、无场景</td>
+</tr>
+<tr>
+<td>Side-talk rejection</td>
+<td>该不该动</td>
+<td>动作</td>
+<td>分场景准确率 / 静默率</td>
+<td>不含原因、不含隐私</td>
+</tr>
+<tr>
+<td>Selective hearing</td>
+<td>知道但该不该说</td>
+<td>答案 + 拒答</td>
+<td>联合分 SE</td>
+<td>尚未覆盖实时时延</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. 学术界：指标体系（五类 + 一张总表）</h2>
+<h3>3.1 行为类：判"做了什么"</h3>
+<p><strong>FD-Bench v1.5 的五类行为</strong>（GPT-4o 基于 parakeet 转写与词级时间戳判定）【论文】：</p>
+<table>
+<thead>
+<tr>
+<th>标签</th>
+<th>定义</th>
+<th>期望出现场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RESPOND</td>
+<td>实质性地回应了重叠语句</td>
+<td>用户打断</td>
+</tr>
+<tr>
+<td>RESUME</td>
+<td>忽略重叠，继续/完成原有任务</td>
+<td>附和、旁聊、背景音</td>
+</tr>
+<tr>
+<td>UNCERTAIN</td>
+<td>表示没听清/请求重复，但无实质回答</td>
+<td>边界情况</td>
+</tr>
+<tr>
+<td>UNKNOWN</td>
+<td>语义无关或低信息量（含沉默）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>（OFF-TARGET / SILENT）</td>
+<td>论文正文与图注列出但表格未单列，口径不完全统一</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>CoDeTT 的四动作 × 十四意图</strong>（arXiv:2603.25434）【论文】：</p>
+<ul>
+<li>动作层（统一用于横向比较）：<code>Maintain</code> / <code>Stop &amp; Listen</code> / <code>Takeover</code> / <code>Dismiss</code></li>
+<li>意图层（14 类，两个系统状态各一套）：SystemSpeaking 下 Maintain = {Backchannel, Invalidation, Side-talk, Distraction}，Stop &amp; Listen = {Interruption, Dismissal, Collaboration}；SystemIdle 下 Takeover = {Completion, Cooperation}，Dismiss = {Incomplete, Invalidation, Dismissal, Exclusion, Side-talk}</li>
+<li>规模：18,000 条决策实例 / 300 小时中英双语</li>
+</ul>
+<p>注意 CoDeTT 把 <strong>Side-talk 同时放在 Maintain（系统在说话时）和 Dismiss（系统空闲时）两个动作下</strong>——这正是"同一个场景、不同系统状态下期望动作不同"的形式化。</p>
+<h3>3.2 错误率类：判"错多少"</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>定义</th>
+<th>分母</th>
+<th>出处</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rejection Rate</td>
+<td>应静默样本中被正确静默的比例</td>
+<td>应静默样本</td>
+<td>HumDial Track II【论文】</td>
+</tr>
+<tr>
+<td>Early Interrupt Rate</td>
+<td>应静默样本中被过早打断/响应的比例</td>
+<td>应静默样本</td>
+<td>HumDial Track II【论文】</td>
+</tr>
+<tr>
+<td>Side-Talk Rejection accuracy</td>
+<td>侧聊片段被判为"非指向设备"的比例</td>
+<td>侧聊片段</td>
+<td>WearVox【论文】</td>
+</tr>
+<tr>
+<td>mute rate / muting rate</td>
+<td>命令本应静默时选择静默的比例</td>
+<td>该场景全部条目</td>
+<td>VGBench【论文】</td>
+</tr>
+<tr>
+<td>EER</td>
+<td>FPR = FNR 时的错误率</td>
+<td>全体</td>
+<td>Alexa DDSD【论文】</td>
+</tr>
+<tr>
+<td>F1 / Precision / Recall</td>
+<td>二分类综合</td>
+<td>全体</td>
+<td>SAS（DDSD 端侧）【论文】</td>
+</tr>
+<tr>
+<td>Rejection accuracy（分类型）</td>
+<td>每类无效查询的判对率</td>
+<td>该类样本</td>
+<td>Reject or Not?【论文】</td>
+</tr>
+</tbody>
+</table>
+<p><strong>这里有一个必须写进报告的坑</strong>：Rejection Rate 与 Early Interrupt Rate 在 HumDial 里是<strong>两个方向相反的指标</strong>，分母相同、含义不同——前者是"该静默时静默了吗"，后者是"该静默时抢跑了吗"。它们在同一分母下互补，但 HumDial 把两者都放进 "Rej" 分数里，实际评测的是"静默质量 + 抢跑控制"的组合。</p>
+<h3>3.3 时延类：判"判对了但来不来得及"</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>定义（原文口径）</th>
+<th>出处</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>stop latency</td>
+<td>重叠语音起点 → 模型停止发声的时长</td>
+<td>FD-Bench v1.5【论文】</td>
+</tr>
+<tr>
+<td>response latency</td>
+<td>重叠语音结束 → 模型下一次发声的时长</td>
+<td>FD-Bench v1.5【论文】</td>
+</tr>
+<tr>
+<td>First Response Delay</td>
+<td>从用户话毕到系统首响的延迟，换算成相对 60 分的分数</td>
+<td>HumDial Track II【论文】</td>
+</tr>
+<tr>
+<td>post-interruption response latency</td>
+<td>被打断后重新接话的延迟</td>
+<td>HiPLEX（arXiv:2610.07727）【论文】</td>
+</tr>
+</tbody>
+</table>
+<p>FD-Bench 的时延统计用 silero VAD 对齐，并对 200 条样本逐条计算后取均值——这意味着<strong>时延与准确率来自同一批样本，可以直接配对分析</strong>。</p>
+<h3>3.4 联合/派生类：判"整体好不好"</h3>
+<ol>
+<li><strong>SMR（Semantic Misalignment Rate，CoDeTT）</strong>：在动作判对的样本里，意图判错的比例。<br />
+<code>SMR_M = #{动作=M 且 意图错} / #{动作=M}</code><br />
+   含义：动作对但理由错（靠声学直觉蒙对）。实测 Gemini3-Pro 的 SMR 为 <strong>15–25%</strong>（最低），MiniCPM-o-4.5 在 Maintain / Stop &amp; Listen 上 <strong>&gt;40%</strong>，即"幸运猜中"。【论文】</li>
+<li><strong>SE（Selective Efficacy，SH-Bench）</strong>：四个准确率的调和平均（见 2.4）。</li>
+<li><strong>HumDial Final Score</strong>：<code>0.4·S_Int + 0.4·S_Rej + 0.2·S_Delay</code>，其中 S_Delay 是相对 60 分基线的延迟分。【论文】</li>
+<li><strong>Turn-take rate / interruption avoidance</strong>（FD-Bench v3）：工具类任务下的轮转指标，与 sideTalk 无直接关系但常被混引。</li>
+</ol>
+<h3>3.5 主观类</h3>
+<ul>
+<li><strong>MOS / UTMOSv2</strong>：FD-Bench v1.5 对重叠前后语音自然度做配对 t 检验（p&lt;0.05），并统计 pitch、intensity、WPM 的变化。【论文】</li>
+<li><strong>人类评测</strong>：HumDial Track I 用 20 名标注员（中英各半）评情感适当性与音频自然度；Track II 全自动。</li>
+<li>产业界更依赖主观：Seeduplex 的判停 MOS +8%、流畅度 MOS +12%。【官方】</li>
+</ul>
+<h3>3.6 端到端实例：一条 sideTalk 样本在 FD-Bench v1.5 里是怎么被算分的</h3>
+<p>以"对旁人说"场景为例，完整链路如下（可作为报告的方法论示意图）：</p>
+<ol>
+<li><strong>构造</strong>：主用户先问"东京现在几点"（模型开始回答，预计输出 6–10 秒）；在第 4 秒插入一句旁聊"奶奶，我挺好的，别担心"（同一说话人音色，音量环境不变）。</li>
+<li><strong>对齐</strong>：silero VAD 检测重叠起点与终点；parakeet-tdt 给出词级时间戳。</li>
+<li><strong>行为判定</strong>：GPT-4o 读转写 + 时间戳，把重叠后的模型输出判为 RESPOND / RESUME / UNCERTAIN / UNKNOWN 之一。本例若模型继续说"东京现在是晚上 8 点"，判 <strong>RESUME</strong>。</li>
+<li><strong>时延计算</strong>：<code>stop latency</code> = 旁聊起点 → 模型停声；<code>response latency</code> = 旁聊终点 → 模型下一次发声。Gemini 在该场景分别为 1.69 s / 1.78 s，GPT-4o 为 0.18 s / 1.16 s。</li>
+<li><strong>声学特征</strong>：对重叠前/后片段算 pitch、intensity、WPM、UTMOSv2，与无重叠基线做配对 t 检验（p&lt;0.05）。</li>
+<li><strong>汇总</strong>：该场景 200 条样本的行为分布即为最终分数（Gemini RESUME 0.99），<strong>不合成跨场景总分</strong>。</li>
+</ol>
+<p>关键点：<strong>行为、时延、声学特征来自同一条样本、同一次对齐</strong>，所以三者可以联合归因（"它为什么不停？是没听出来，还是听出来但策略保守？"）——这是 FD-Bench 相对其他基准最大的方法学优势。</p>
+<h3>3.7 学术评测的方法论共性（写报告时可直接引用）</h3>
+<ol>
+<li><strong>判官化</strong>：行为分类、意图理解、答案质量普遍交给 LLM 判官（GPT-4o / Qwen3-Omni-30B / Gemini3-Pro），人评只保留在最终主观项。</li>
+<li><strong>配对设计</strong>：同一句话做"重叠 / 不重叠"两版，比较差异（FD-Bench），或固定词面只换说话人（VGBench 的 speaker-switch 对）。</li>
+<li><strong>分场景报告</strong>：没有一篇 2026 年的论文报"整体 sideTalk 准确率"，全部按场景拆。</li>
+<li><strong>置信区间</strong>：SH-Bench 明确报 95% Wilson CI；国内基准（HumDial、ChorusDuplex）多数未报。</li>
+<li><strong>可复现性分级</strong>：FD-Bench / WearVox / CoDeTT / ChorusDuplex / Reject or Not? 公开数据与代码；VGBench 未公开数据；HumDial 测试包公开、需注册。【论文】</li>
+</ol>
+<hr />
+<h2>4. 学术界：七个核心评测集逐一拆解</h2>
+<p><strong>七个评测集一览（先看全貌，再看细节）</strong></p>
+<table>
+<thead>
+<tr>
+<th>评测集</th>
+<th>年份</th>
+<th>语言</th>
+<th>规模</th>
+<th>标注粒度</th>
+<th>指标</th>
+<th>公开</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FD-Bench v1.5</td>
+<td>2025-07</td>
+<td>英</td>
+<td>4 场景 × 200 条</td>
+<td>行为（5 类）+ 时延</td>
+<td>行为分布 / stop / response latency</td>
+<td>✅ 代码+数据</td>
+</tr>
+<tr>
+<td>HumDial Track II</td>
+<td>2026-02</td>
+<td>中/英</td>
+<td>测试 5,000（拒识 2,000）</td>
+<td>场景（9 子类）</td>
+<td>拒识率 / 早期打断率 / 首响应延迟</td>
+<td>✅ 测试包（需注册）</td>
+</tr>
+<tr>
+<td>VGBench</td>
+<td>2026-09</td>
+<td>英</td>
+<td>1,018</td>
+<td>动作（3 类）</td>
+<td>静默率 / side-talk 准确率</td>
+<td>❌ 数据未公开</td>
+</tr>
+<tr>
+<td>WearVox</td>
+<td>2026-01</td>
+<td>英</td>
+<td>3,842（拒识子集 1,082）</td>
+<td>任务级</td>
+<td>Side-Talk Rejection 准确率</td>
+<td>✅ 公开</td>
+</tr>
+<tr>
+<td>CoDeTT</td>
+<td>2026-03</td>
+<td>中/英</td>
+<td>18,000 决策 / 300 h</td>
+<td>动作 4 + 意图 14</td>
+<td>ACC + SMR</td>
+<td>✅ 公开</td>
+</tr>
+<tr>
+<td>SH-Bench</td>
+<td>2026-04</td>
+<td>英</td>
+<td>3,968 段 / 77k 题</td>
+<td>主/旁观 × general/selective</td>
+<td>SE（调和平均）</td>
+<td>✅ 公开</td>
+</tr>
+<tr>
+<td>Reject or Not?</td>
+<td>2025-12</td>
+<td>中</td>
+<td>11,913 条</td>
+<td>13 类无效查询</td>
+<td>分类型 accuracy</td>
+<td>✅ 公开</td>
+</tr>
+</tbody>
+</table>
+<h3>4.1 FD-Bench v1.5（arXiv:2507.23159，2025-07-30）</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>场景</td>
+<td>用户打断 / 用户附和 / 对旁人说 / 背景语音，各 200 条</td>
+</tr>
+<tr>
+<td>模型</td>
+<td>Freeze-Omni、Moshi、Gemini Live、Amazon Nova Sonic、GPT-4o realtime</td>
+</tr>
+<tr>
+<td>指标</td>
+<td>五类行为分布 + stop/response latency + pitch/intensity/WPM/UTMOSv2</td>
+</tr>
+<tr>
+<td>关键数据（对旁人说）</td>
+<td><strong>Gemini：RESPOND 0.00 / RESUME 0.99</strong>；Sonic 0.10/0.90；GPT-4o <strong>0.91/0.02</strong>；Freeze 0.58/0.25；Moshi 0.20/0.19</td>
+</tr>
+<tr>
+<td>关键数据（背景语音）</td>
+<td>Gemini <strong>0.70/0.30</strong>；Sonic 0.01/0.98；GPT-4o 0.93/0.04</td>
+</tr>
+<tr>
+<td>时延（对旁人说，停止｜响应）</td>
+<td>Gemini 1.69｜1.78 s；Sonic 1.77｜2.04 s；GPT-4o 0.18｜1.16 s</td>
+</tr>
+<tr>
+<td>核心洞察</td>
+<td>两家策略两极：<strong>repair-first（GPT-4o，秒停但不分对象）vs continuity-first（Gemini/Sonic，分对象但反应慢）</strong></td>
+</tr>
+<tr>
+<td>局限</td>
+<td>英语、合成/受控混音、每场景仅 200 条（±7 pt 量级）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>这张表最值得引用的结论</strong>：Gemini 在"对旁人说"上 99% 不响应，但在"背景语音"上 70% 会响应——<strong>同一种能力，换个声学场景就崩</strong>。任何"sideTalk 准确率 97%"的单点宣传，都要先问是哪个场景。</p>
+<h3>4.2 HumDial Track II（ICASSP 2026）</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>场景</td>
+<td>Interruption 3,000（FQ 追问 / ND 否定 / RR 重复 / TS 转题 / ST 沉默终止，各 600）+ Rejection 2,000（URB 附和 600 / PH 停顿 600 / TPS 第三方 600 / SDO 对别人说 200）</td>
+</tr>
+<tr>
+<td>数据</td>
+<td>真人演员按脚本表演，非合成混音；训练 9,418 / 开发 1,800 / 测试 5,000</td>
+</tr>
+<tr>
+<td>指标</td>
+<td>Int（响应率+时延）、Rej（拒识率+早期打断率）、Delay（首响应延迟），加权 0.4/0.4/0.2</td>
+</tr>
+<tr>
+<td>拒识四子类</td>
+<td>URB = 用户实时附和（"嗯""对"）；PH = 停顿（用户思考留白）；TPS = 第三方说话；SDO = 用户对别人说话</td>
+</tr>
+<tr>
+<td>榜单</td>
+<td>冠军 Cookie asr：Int 79.3 / <strong>Rej 72.2</strong> / 1.260 s / 76.6；Badcat Int <strong>89.7</strong> 但 Rej 57.8；级联 Cascade Int 28.1 / <strong>Rej 30.9</strong> / Final 37.7</td>
+</tr>
+<tr>
+<td>核心洞察</td>
+<td><strong>所有系统 Rej 都明显低于 Int</strong>，官方结论：区分真实用户话轮与背景噪声仍是全双工的首要瓶颈</td>
+</tr>
+<tr>
+<td>局限</td>
+<td>综合分不可拆解；SDO 只有 200 条（±7 pt）；无 sideTalk 专属的"误执行"项</td>
+</tr>
+</tbody>
+</table>
+<h3>4.3 VGBench（arXiv:2609.32536，2026-09）</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>规模</td>
+<td>1,018 条，三类：side-talk / self-talk / speaker-switch</td>
+</tr>
+<tr>
+<td>动作空间</td>
+<td><code>silence</code> / <code>tool call</code> / <code>natural-language answer</code></td>
+</tr>
+<tr>
+<td>方法</td>
+<td>六款原始 Audio LLM + 三种免训练适配；再以 VoxGate 做后训练案例</td>
+</tr>
+<tr>
+<td>关键数据</td>
+<td>原始模型最高切换静默率仅 <strong>14%</strong>；VoxGate 监督训练后 <strong>91.3%</strong>；side-talk 68.4% → 70.9%；self-talk 静默 52.0% → 60.0%</td>
+</tr>
+<tr>
+<td>核心洞察</td>
+<td><strong>模型能认出工具，却不肯闭嘴</strong>——"知道"与"做"之间存在系统性断裂</td>
+</tr>
+<tr>
+<td>局限</td>
+<td>数据未公开；规模偏小；英语</td>
+</tr>
+</tbody>
+</table>
+<h3>4.4 WearVox（ICLR 2026，arXiv:2601.02391）</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>规模</td>
+<td>3,842 段多通道（AI 眼镜）；Side-Talk Rejection 子任务 1,082 条（500 条由工具调用复制构成配对）</td>
+</tr>
+<tr>
+<td>指标</td>
+<td>各任务准确率，含 Side-Talk Rejection</td>
+</tr>
+<tr>
+<td>关键数据</td>
+<td>单通道 85.6% → 多通道 <strong>93.9%（+8.3 pt）</strong></td>
+</tr>
+<tr>
+<td>核心洞察</td>
+<td><strong>空间信息（多麦）本身就是 sideTalk 信号</strong>，不必等语义模型</td>
+</tr>
+<tr>
+<td>局限</td>
+<td>英语、设备形态特定（眼镜）、许可不明</td>
+</tr>
+</tbody>
+</table>
+<h3>4.5 CoDeTT（arXiv:2603.25434，2026）</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>规模</td>
+<td>18,000 决策实例 / 300 小时 / 中英双语 / 两系统状态</td>
+</tr>
+<tr>
+<td>标注</td>
+<td>4 动作 + 14 意图，六阶段流水线（Gemini3-Pro 生成 + GPT-5 质检 + Qwen3-TTS + Qwen3-ASR 校验 + 真实锚点）</td>
+</tr>
+<tr>
+<td>指标</td>
+<td>分动作 ACC + <strong>SMR</strong></td>
+</tr>
+<tr>
+<td>关键数据</td>
+<td>Gemini3-Pro 平均 ACC 约 81–82%、SMR 15–25%（最稳健）；MiniCPM-o-4.5 在 Maintain/Stop&amp;Listen 上 SMR &gt;40%；FireRedChat Takeover 88.2%（英）但 Maintain/Dismiss 完全失效</td>
+</tr>
+<tr>
+<td>核心洞察</td>
+<td><strong>拒识的正确率可以被"蒙"出来</strong>——必须同时报 SMR，否则无法区分"真懂"与"声学直觉"</td>
+</tr>
+<tr>
+<td>局限</td>
+<td>大量合成数据；意图标注依赖单一 LLM 生成 + 单一 LLM 质检</td>
+</tr>
+</tbody>
+</table>
+<h3>4.6 SH-Bench + SE（ACL 2026，arXiv:2512.06380）</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>规模</td>
+<td>3,968 段多说话人混合音频 + 77k 五选一选择题</td>
+</tr>
+<tr>
+<td>模式</td>
+<td>general（全答对）/ selective（旁观者问题必须答 IDK）</td>
+</tr>
+<tr>
+<td>指标</td>
+<td>四维准确率 + <strong>SE（调和平均）</strong></td>
+</tr>
+<tr>
+<td>关键数据</td>
+<td>Gemini 2.5 Pro 97.3/97.0/65.5/59.2 → SE 75.8；GPT-4o-audio → SE 56.1；BPFT 后 Step-Audio-2-mini → SE 91.7</td>
+</tr>
+<tr>
+<td>核心洞察</td>
+<td><strong>听懂 ≠ 保护</strong>：强理解模型的旁观者准确率只有 59.2%，等于"听懂了但照样说"</td>
+</tr>
+<tr>
+<td>局限</td>
+<td>不测实时性；选择题形式与真实对话有差距</td>
+</tr>
+</tbody>
+</table>
+<h3>4.7 其他值得引用的六个工作</h3>
+<table>
+<thead>
+<tr>
+<th>工作</th>
+<th>贡献</th>
+<th>关键数字</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reject or Not?（arXiv:2512.10257，美的+哈工程）</td>
+<td><strong>首个中文智能家居拒识基准</strong>，13 类无效查询，11,913 条文本-语音对</td>
+<td>主指标 = 分类型 accuracy；类别 4 明确是"非指向设备的闲聊（多人或自言自语）"</td>
+</tr>
+<tr>
+<td>ChorusDuplex-SideTalk</td>
+<td>中文合成（TTS）1,667 轮，逐轮 <code>addressee</code> 标注</td>
+<td>100 段 / 200 条 48 kHz 立体声（clean + babble 10 dB）</td>
+</tr>
+<tr>
+<td>MMW（Meta，arXiv:2507.05609）</td>
+<td>智能眼镜多麦 Whisper，帧级 side-talk 抑制</td>
+<td>噪声场景 <strong>WER 相对 −4.95%</strong></td>
+</tr>
+<tr>
+<td>SAS（arXiv:2604.08412）</td>
+<td>端侧 pre-ASR DDSD，60 小时多说话人测试集</td>
+<td>F1 <strong>0.86</strong>（P 0.89 / R 0.83）</td>
+</tr>
+<tr>
+<td>HiPLEX（arXiv:2610.07727）</td>
+<td>层级策略分解，降低"不该接管时接管"</td>
+<td>停顿/附和机会上的 takeover rate 下降</td>
+</tr>
+<tr>
+<td>People Making Conversation（arXiv:2610.12802）</td>
+<td>自然度评测，含"是否在该沉默时沉默"</td>
+<td>全双工模型是唯一"会保持沉默"的一类</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. 产业界：定义与口径（谁在做、怎么叫、报什么数）</h2>
+<h3>5.1 字节 Seeduplex（2026-04-09）——唯一规模化落地，但只有相对值</h3>
+<p><strong>定义</strong>：抗干扰 + 动态判停 + <strong>指向性理解</strong>，"精准判断哪些是真正和模型交互的声音，哪些是干扰声"。【官方】</p>
+<p><strong>公开成绩（全部相对上一代半双工框架）</strong>【官方】：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>数值</th>
+<th>口径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>判停延迟</td>
+<td><strong>−250 ms</strong></td>
+<td>绝对值差</td>
+</tr>
+<tr>
+<td>AI 抢话比例</td>
+<td><strong>−40%</strong></td>
+<td>相对减少（复杂场景）</td>
+</tr>
+<tr>
+<td>打断响应延迟</td>
+<td><strong>−300 ms</strong></td>
+<td>绝对值差</td>
+</tr>
+<tr>
+<td>误回复率 / 误打断率</td>
+<td><strong>降低一半</strong></td>
+<td>相对减半（复杂声学干扰场景）</td>
+</tr>
+<tr>
+<td>判停 MOS</td>
+<td><strong>+8%</strong></td>
+<td>主观</td>
+</tr>
+<tr>
+<td>对话流畅度 MOS</td>
+<td><strong>+12%</strong></td>
+<td>主观</td>
+</tr>
+</tbody>
+</table>
+<p><strong>四个必须写在报告里的判断</strong>：<br />
+1. 没有测试集、没有样本量、没有绝对分母——"减半"无法换算成可比的侧聊拒识率。<br />
+2. 它的"抗干扰"混合了声学降噪与对象判定两层，<strong>不能等同于 sideTalk 能力</strong>。<br />
+3. 场景描述具体（咖啡厅道别、外卖员、多人重叠、车内播报）——这是国内最接近"场景化定义"的产品表述。<br />
+4. 版本：豆包 App 全量，升级自 Doubao Realtime Voice。</p>
+<h3>5.2 Google Gemini Live——定义了能力，但不给指标</h3>
+<p><strong>定义</strong>：Proactive audio，"控制模型何时响应、在什么上下文中响应"；官方定位是让模型忽略非指向设备的语音。【官方】</p>
+<p><strong>第三方实测（FD-Bench v1.5，测的是 2.5 代）</strong>【第三方/论文】：<br />
+- 对旁人说：RESUME <strong>0.99</strong>、RESPOND 0.00，但 stop latency <strong>1.69 s</strong>、response latency 1.78 s<br />
+- 背景语音：RESPOND <strong>0.70</strong>（误响应高）<br />
+- 用户打断场景：RESPOND 仅 0.33、RESUME 0.55——<strong>过度保话轮</strong></p>
+<p><strong>判断</strong>：Google 是"能力定义 + 行为描述"路线，从不发布 sideTalk 指标；任何"Gemini sideTalk 很强"的说法都必须锁定版本与场景。</p>
+<h3>5.3 OpenAI GPT-Live（2026-07-08）——全双工，但零 sideTalk 数字</h3>
+<p><strong>定义</strong>：full-duplex，可以边说边听，<strong>去掉了独立的 turn detector</strong>【官方】；deep reasoning 交给后台 GPT-5.5。</p>
+<p><strong>公开内容</strong>：只有行为描述（"mhmm""yeah"、需要时保持安静），无任何 sideTalk / 拒识指标。</p>
+<p><strong>参照（上一代，FD-Bench v1.5）</strong>：GPT-4o realtime 在"对旁人说"上 RESPOND <strong>0.91</strong>、"背景语音"上 <strong>0.93</strong>——<strong>几乎把旁聊全部当指令</strong>，但 stop latency 仅 0.18 s（秒停、但不分对象）。这是"repair-first"策略的极端样本。</p>
+<h3>5.4 华为小艺——有产品机制，无对话内指标</h3>
+<p><strong>定义/机制</strong>【官方】：<br />
+- 唤醒声纹：官方表述为"只回应你的声音"，需本人录制（具体支持版本以官网为准，版本号【待核】）<br />
+- 小艺私语：抬机 + 嘴距麦克风 <strong>≤5 cm</strong>、免唤醒词直接说（HarmonyOS 5.0+）</p>
+<p><strong>判断</strong>：这是<strong>"入口级"拒识</strong>（谁唤醒、多近说），不是对话内 sideTalk。官方没有任何"旁人说 / 电视声 / 多人重叠"下的量化指标——我们在报告里应明确这条空白，而不是替它补数字。</p>
+<h3>5.5 Amazon Alexa——工业界最成熟的口径：DDSD + EER</h3>
+<p><strong>定义</strong>：device-directed speech detection，"区分语音请求是发给智能家居设备还是背景语音"（Interspeech 2019）。【论文】</p>
+<p><strong>指标</strong>：EER 为主，辅以 FPR/FNR 平衡点；数据 324K + 13K；工程结论是按对话类型分分支相对降 EER 12.5%。</p>
+<p><strong>判断</strong>：Amazon 是把 sideTalk 做成<strong>二分类工程问题</strong>的典型，优点是口径稳定可复现，缺点是不含动作、不含时延。</p>
+<h3>5.6 Meta——产业研究边界：WearVox / MMW</h3>
+<p>Meta 同时以论文形式发布评测集（WearVox, ICLR 2026）与算法（MMW），指标是<strong>任务准确率 + WER</strong>。它的特殊性在于：把 sideTalk 的物理层（多麦空间信息）做成了可测变量，85.6% → 93.9% 的增益证明<strong>声学线索的价值被严重低估</strong>。</p>
+<h3>5.7 京东 JoyAI-Talker（2026-07 WAIC 发布，arXiv:2608.01119）</h3>
+<p><strong>公开指标（官方页面自报）</strong>【官方】：<br />
+- 旁人误触发率 <strong>0.17</strong><br />
+- 附和误打断率 <strong>0.01</strong><br />
+- 全链路时延 <strong>&lt;1 s</strong><br />
+- 论文补充：用户打断响应率 <strong>0.88</strong>，背景语音下误触发"极低"【论文】</p>
+<p><strong>判断</strong>：这是国内<strong>唯一给出"误触发"绝对数值</strong>的厂商，但 0.17 的分母未公开（每次？每百次？每小时？），且"旁人误触发"与"附和误打断"是两个不同任务，<strong>不能相加</strong>。</p>
+<h3>5.8 腾讯 Gander（混元，开源）</h3>
+<p><strong>公开指标（第三方转述）</strong>【第三方】：轮次接管率 100.0%、<strong>抢话误打断率 8.0%</strong>（级联流水线 33.0%）。</p>
+<p><strong>判断</strong>：这是"抢话率"口径——它测的是"助手打断用户"的比例，<strong>不是 sideTalk</strong>。方向上与拒识相反：抢话率低可能意味着过度保守。</p>
+<h3>5.9 产业界口径的三个共性（这是本节的核心洞察）</h3>
+<ol>
+<li><strong>全部相对化</strong>：豆包的"减半""−40%"、Gander 的"8.0% vs 33.0%"、Alexa 的"相对 EER −12.5%"——没有一家公布绝对分母与测试集。</li>
+<li><strong>能力混合</strong>：把降噪、声纹、对象判定、判停揉成一个"抗干扰"叙事，导致无法归因。</li>
+<li><strong>零互认</strong>：四家四种指标（误回复率、RESUME、误触发率、抢话率），<strong>任意两家之间都无法换算</strong>。</li>
+</ol>
+<hr />
+<h2>6. 产业界 vs 学术界：六个结构性差异</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>学术界</th>
+<th>产业界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定义颗粒度</td>
+<td>四代演进，已到"意图 + 隐私"</td>
+<td>停留在"抗干扰/指向性理解"</td>
+</tr>
+<tr>
+<td>指标完备性</td>
+<td>行为 + 错误率 + 时延 + 联合分</td>
+<td>单点能力分 + MOS</td>
+</tr>
+<tr>
+<td>分母公开性</td>
+<td>明确（每场景条数）</td>
+<td>几乎不公开</td>
+</tr>
+<tr>
+<td>数据真实性</td>
+<td>合成与真人混合，逐步转向真人</td>
+<td>真实线上流量，但不公开</td>
+</tr>
+<tr>
+<td>可复现性</td>
+<td>部分公开（FD-Bench / WearVox / CoDeTT / Reject or Not?）</td>
+<td>零复现（API 黑盒）</td>
+</tr>
+<tr>
+<td>发布动机</td>
+<td>建立可比性</td>
+<td>建立能力叙事</td>
+</tr>
+</tbody>
+</table>
+<p><strong>一句话</strong>：学术界在造尺子，产业界在报成绩；<strong>尺子上没有的刻度，产业界就不会报</strong>。</p>
+<hr />
+<h2>7. 横向对照：同一模型在不同评测集上分数不可比（举证）</h2>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>FD-Bench v1.5（对旁人说）</th>
+<th>FD-Bench v1.5（背景语音）</th>
+<th>HumDial Track II</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gemini Live</td>
+<td>RESUME 0.99</td>
+<td>RESPOND 0.70</td>
+<td>未参赛</td>
+<td>同能力、不同声学场景，差 70 点</td>
+</tr>
+<tr>
+<td>GPT-4o realtime</td>
+<td>RESPOND 0.91</td>
+<td>RESPOND 0.93</td>
+<td>未参赛</td>
+<td>对象判定几乎为零，但时延最好（0.18 s）</td>
+</tr>
+<tr>
+<td>Nova Sonic</td>
+<td>RESUME 0.90</td>
+<td>RESUME 0.98</td>
+<td>未参赛</td>
+<td>与 Gemini 相反：背景音更强</td>
+</tr>
+<tr>
+<td>京东 JoyAI-Talker</td>
+<td>未测</td>
+<td>误触发 0.17</td>
+<td>未参赛</td>
+<td>分母不明</td>
+</tr>
+</tbody>
+</table>
+<p><strong>三条不可比的技术原因</strong>：<br />
+1. <strong>场景不同</strong>：对旁人说 ≠ 背景语音 ≠ 旁人之间 ≠ 电视人声，四者难度差 30–70 点。<br />
+2. <strong>分母不同</strong>：每场景 200 条 vs 2,000 条 vs 每次/每小时。<br />
+3. <strong>判定不同</strong>：GPT-4o 判官分类 vs 人工标签 vs 厂商自评。</p>
+<p>结论：<strong>任何"谁 sideTalk 更强"的结论，都必须锁定"版本 + 场景 + 指标 + 分母"四要素，缺一不可。</strong></p>
+<hr />
+<h2>8. 五个空白（报告的机会点）</h2>
+<ol>
+<li><strong>没有统一"拒识"定义</strong>：DDSD（二分类）、Side-Talk Rejection（任务准确率）、HumDial Rejection（四场景 + 综合分）、VGBench（动作级静默率）四套并存，学界共识只有一条——<strong>必须分场景报</strong>。</li>
+<li><strong>中文 + 声学维度双缺失</strong>：中文基准只有一个 Reject or Not?（智能家居、文本+语音），且不含"对谁说"的声学判定；ChorusDuplex 是 TTS 合成。</li>
+<li><strong>时延未进入联合分</strong>：只有 HumDial 把延迟按 20% 权重并入总分，其余评测集的"静默正确"都不计时——这意味着<strong>"3 秒后才闭嘴"可以拿满分</strong>。</li>
+<li><strong>隐私维度在国内几乎空白</strong>：SH-Bench 的 SE 把"听懂但不泄露"变成可测，国内无一对应基准。</li>
+<li><strong>误执行没有被任何评测集覆盖</strong>：VGBench 的 tool call 最接近，但它评的是"该不该调用"，不是"违规调用的代价分级"（可逆/不可逆）。</li>
+</ol>
+<hr />
+<h2>9. 对我们的建议（家庭音箱 + 手机助手）</h2>
+<h3>9.1 对外口径：三层对齐</h3>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>采用谁的</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>场景分类</td>
+<td>我们的 S0–S4（对齐 HumDial 的 URB/PH/TPS/SDO + VGBench 三分类）</td>
+<td>覆盖国内家庭场景，且能与公开榜单映射</td>
+</tr>
+<tr>
+<td>指标</td>
+<td>五项齐报（见 9.2）</td>
+<td>学界的四类指标 + 产业界的运营口径</td>
+</tr>
+<tr>
+<td>评测方法</td>
+<td>FD-Bench v1.5 的行为 + 时延配对</td>
+<td>唯一同时给场景期望行为与双时延的公开框架</td>
+</tr>
+</tbody>
+</table>
+<h3>9.2 五项齐报（定义固定下来，避免内部争论）</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>分母</th>
+<th>目标</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>分场景拒识率（S1–S4）</td>
+<td>应静默样本（分场景）</td>
+<td>S1 ≥90% / S2 ≥95% / S3 ≥98% / S4 ≥95%</td>
+<td>带 Wilson CI</td>
+</tr>
+<tr>
+<td>FRR（真指令被静默）</td>
+<td>S0（与 S0_guest 分开）</td>
+<td>≤3%（内部 ≤2%）</td>
+<td>与拒识率成对，不可省</td>
+</tr>
+<tr>
+<td>误执行</td>
+<td>应静默样本</td>
+<td><strong>0</strong>（不可逆动作）</td>
+<td>绝对计数，按动作可逆性分级</td>
+</tr>
+<tr>
+<td>静默决策延迟</td>
+<td>应静默事件</td>
+<td>P50 ≤390 ms</td>
+<td>对齐 FD-Bench 的 stop latency 口径</td>
+</tr>
+<tr>
+<td>FA/hour（线上）</td>
+<td>使用时长</td>
+<td>运营监控</td>
+<td>唯一能反映"用户真实被打扰"的口径</td>
+</tr>
+</tbody>
+</table>
+<h3>9.3 自建评测集要补的三件事</h3>
+<ol>
+<li><strong>补中文自然场景 + 声学</strong>：现有中文集只有文本或合成，缺真人家庭录音（电视、多人、厨房噪声）。</li>
+<li><strong>补 SMR 式诊断</strong>：不只判"静默/响应"，还要判<strong>为什么</strong>——否则我们在 S3 上的高分无法证明模型真懂。</li>
+<li><strong>补"知道但不泄露"</strong>：把 SE 的思路引入记忆系统（记了旁人的话但不主动说），这是我们与竞品的差异点，也是合规前置项。</li>
+</ol>
+<h3>9.4 与技术选型的映射</h3>
+<ul>
+<li>音频直入 + 决策头（respond / silent / silent_record / clarify / NEI）对应 CoDeTT 的四动作，可直接映射到公开榜单做对照。</li>
+<li>多麦/多通道是<strong>被验证有效的免费增益</strong>（WearVox +8.3 pt）——手机双麦、音箱麦阵要显式做进特征，不能只靠语义模型。</li>
+<li>校准必须做：VGBench 的"能认出工具却不肯闭嘴"说明<strong>输出概率与动作阈值是两个问题</strong>。</li>
+</ul>
+<hr />
+<h2>10. 五条结论（可直接进报告）</h2>
+<ol>
+<li><strong>定义已经分层，别再问"sideTalk 准确率是多少"</strong>：L1 声学 → L2 对象 → L3 动作，三层各自有指标，混报必然失真。</li>
+<li><strong>学界的核心进步是"从行为到原因"</strong>：SMR 揭示"动作对但理由错"，SE 揭示"听懂但泄露"——这两条是 2026 年最值得引用的方法论。</li>
+<li><strong>产业界的核心事实是"没有绝对数"</strong>：豆包、Gemini、GPT-Live、小艺、京东，五家五套口径，全部不可横比；引用必须锁版本 + 场景。</li>
+<li><strong>最大的公共短板是时延</strong>：除 HumDial 外，所有评测集的"静默正确"都不计时，导致"慢慢闭嘴"被算作正确。</li>
+<li><strong>我们的机会在"中文 + 声学 + 误执行"三者的交集</strong>：公开集没有一个同时覆盖，而这恰好是家庭音箱/手机助手真实上线的三条硬约束。</li>
+</ol>
+<hr />
+<h2>附：来源清单</h2>
+<p><strong>一级（论文/官方原文，本轮已核）</strong><br />
+- Full-Duplex-Bench v1.5，arXiv:2507.23159（2025-07-30）<br />
+- The ICASSP 2026 HumDial Challenge，arXiv:2601.05564v2（2026-02-04）<br />
+- VGBench: Do Audio LLMs Listen Before They Act?，arXiv:2609.32536（2026-09）<br />
+- WearVox，ICLR 2026，arXiv:2601.02391<br />
+- CoDeTT，arXiv:2603.25434（2026）<br />
+- SH-Bench: Protecting Bystander Privacy via Selective Hearing，ACL 2026，arXiv:2512.06380<br />
+- Reject or Not?，arXiv:2512.10257（2025-12，美的 + 哈工程）<br />
+- MMW，arXiv:2507.05609（Meta，2025-07）<br />
+- SAS，arXiv:2604.08412<br />
+- JoyAI-Talker，arXiv:2608.01119（京东，2026-08-02）+ 官方页面 research.joyai.com/joyai-talker<br />
+- Seeduplex 官方技术博客，seed.bytedance.com/zh/seeduplex（2026-04-09）<br />
+- Gemini Live API 文档（proactive audio），aistudio.google.com/docs/live-api<br />
+- Introducing GPT-Live，openai.com/index/introducing-gpt-live（2026-07-08）<br />
+- 华为「小艺私语」官方支持页，consumer.huawei.com/cn/support/content/zh-cn16010150<br />
+- Alexa DDSD，Interspeech 2019（Huang et al., Amazon）</p>
+<p><strong>二级（第三方评测/转述，需标注）</strong><br />
+- Gander 抢话误打断 8.0%（腾讯混元开源，知乎技术解读转述）<br />
+- FD-Bench v1.5 对 Gemini / GPT-4o 的分数：来自论文实验，但被测版本为 2.5 代</p>
+<p><strong>待核</strong><br />
+- JoyAI-Talker「0.17 / 0.01」的分母口径（官方未说明）<br />
+- 豆包「误回复率减半」的绝对基数（官方未公布）</p></body></html>
