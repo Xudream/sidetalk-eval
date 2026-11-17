@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全双工交互中的 Side Talk —— 定义、指标与评测 · 学术界 × 产业界技术洞察</title>
+<style>
+:root{
+  --bg:#faf9f7; --ink:#141311; --ink-2:#5f5a52; --ink-3:#8f887d;
+  --hair:#e5e1da; --hair-2:#d6d1c8;
+  --accent:#a3451f; --accent-soft:rgba(163,69,31,.08);
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.75;font-weight:400;-webkit-font-smoothing:antialiased}
+a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--hair-2)}
+a:hover{border-bottom-color:var(--accent);color:var(--accent)}
+/* ---------- cover ---------- */
+.cover{max-width:1180px;margin:0 auto;padding:96px 48px 64px}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase}
+.kicker b{color:var(--accent);font-weight:500}
+h1{font-size:56px;line-height:1.08;font-weight:250;letter-spacing:-.02em;margin:28px 0 10px;max-width:20ch}
+h1 strong{font-weight:600;color:var(--accent);letter-spacing:0}
+.sub{font-size:20px;font-weight:300;color:var(--ink-2);margin-bottom:44px;letter-spacing:.01em}
+.meta{display:flex;gap:40px;flex-wrap:wrap;border-top:1px solid var(--hair);padding-top:22px;max-width:760px}
+.meta div{font-size:12.5px;color:var(--ink-2)}
+.meta span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase;margin-bottom:4px}
+/* ---------- layout ---------- */
+.shell{max-width:1180px;margin:0 auto;padding:0 48px 96px;display:grid;grid-template-columns:216px 1fr;gap:72px;align-items:start}
+nav.toc{position:sticky;top:40px;padding-top:8px}
+nav.toc .t{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;margin-bottom:16px}
+nav.toc a{display:block;font-size:12.5px;color:var(--ink-2);padding:5px 0;border-bottom:none;font-weight:400}
+nav.toc a:hover{color:var(--accent)}
+nav.toc a b{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--ink-3);margin-right:10px}
+main{min-width:0;max-width:840px}
+/* ---------- sections ---------- */
+section{padding:72px 0 8px;border-top:1px solid var(--hair);margin-bottom:56px}
+section:first-of-type{border-top:none}
+.folio{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink-3)}
+h2{font-size:27px;font-weight:600;letter-spacing:-.01em;margin:10px 0 8px;line-height:1.25}
+h2 em{font-style:normal;font-weight:300;color:var(--ink-2)}
+.lede{font-size:16px;font-weight:300;color:var(--ink-2);max-width:62ch;margin-bottom:8px}
+h3{font-size:16.5px;font-weight:600;margin:40px 0 12px;letter-spacing:.01em}
+h3 .n{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--accent);margin-right:12px}
+p{max-width:66ch;margin:14px 0;color:var(--ink)}
+p.wide{max-width:none}
+.muted{color:var(--ink-3)}
+small{font-size:12.5px;color:var(--ink-3)}
+code{font-family:var(--mono);font-size:12.5px;background:var(--accent-soft);padding:1px 5px;border-radius:2px}
+hr{border:none;border-top:1px solid var(--hair);margin:32px 0;max-width:280px;margin-left:0}
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13.5px;line-height:1.6}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500;text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--hair-2)}
+td{padding:12px 14px 12px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+td:first-child{color:var(--ink);font-weight:500}
+tr:last-child td{border-bottom:1px solid var(--hair-2)}
+table.tight td{padding:9px 12px 9px 0;font-size:13px}
+td .en{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.q{font-style:normal;color:var(--ink-2)}
+.accent-cell{color:var(--accent);font-weight:500}
+/* ---------- numbered findings ---------- */
+ol.findings{list-style:none;counter-reset:f;margin:24px 0}
+ol.findings li{counter-increment:f;position:relative;padding:18px 0 18px 58px;border-bottom:1px solid var(--hair);max-width:none}
+ol.findings li::before{content:counter(f,decimal-leading-zero);position:absolute;left:0;top:20px;font-family:var(--mono);font-size:13px;color:var(--accent)}
+ol.findings li strong{font-weight:600}
+/* ---------- definition blocks ---------- */
+.def{border-left:1px solid var(--hair-2);padding:6px 0 6px 26px;margin:22px 0;max-width:66ch}
+.def .t{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:8px}
+.def p{margin:8px 0}
+/* ---------- svg ---------- */
+figure{margin:32px 0}
+figcaption{font-size:12.5px;color:var(--ink-3);margin-top:12px;max-width:62ch}
+figure svg{width:100%;height:auto;display:block}
+/* ---------- metrics strip ---------- */
+.metrics{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2);margin:28px 0}
+.metric{flex:1 1 150px;padding:20px 24px 20px 0}
+.metric .v{font-size:30px;font-weight:250;letter-spacing:-.02em}
+.metric .v b{font-weight:600;color:var(--accent)}
+.metric .l{font-size:12px;color:var(--ink-3);margin-top:4px;line-height:1.5}
+/* ---------- timeline ---------- */
+.timeline{margin:26px 0;border-left:1px solid var(--hair-2)}
+.tl-item{position:relative;padding:14px 0 14px 30px}
+.tl-item::before{content:"";position:absolute;left:-3px;top:22px;width:5px;height:5px;background:var(--accent);border-radius:50%}
+.tl-item .y{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.06em}
+.tl-item .what{font-size:14px;margin-top:2px}
+.tl-item .note{font-size:12.5px;color:var(--ink-3)}
+/* ---------- compare ---------- */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2);margin:26px 0}
+.compare>div{padding:22px 26px 22px 0}
+.compare>div+div{border-left:1px solid var(--hair);padding-left:26px}
+.compare .h{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.compare ul{list-style:none}
+.compare li{padding:7px 0;border-bottom:1px solid var(--hair);font-size:13.5px}
+.compare li:last-child{border-bottom:none}
+/* ---------- sources ---------- */
+ol.src{list-style:none;font-size:13px;color:var(--ink-2);columns:1;margin:20px 0}
+ol.src li{padding:9px 0;border-bottom:1px solid var(--hair)}
+ol.src .id{font-family:var(--mono);color:var(--accent);font-size:12px;margin-right:10px}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:2px 7px;border:1px solid var(--hair-2);color:var(--ink-3);white-space:nowrap}
+.tag.ok{color:var(--accent);border-color:var(--accent)}
+/* ---------- colophon ---------- */
+.colophon{border-top:1px solid var(--hair);margin-top:72px;padding-top:28px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;color:var(--ink-3);font-size:12px}
+.colophon .mono{font-family:var(--mono);letter-spacing:.08em}
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr;gap:24px;padding:0 24px 64px}
+  nav.toc{position:static;border-top:1px solid var(--hair);padding-top:16px}
+  nav.toc a{display:inline-block;margin-right:14px}
+  .cover{padding:64px 24px 40px}
+  h1{font-size:38px}
+  .compare{grid-template-columns:1fr}
+  .compare>div+div{border-left:none;border-top:1px solid var(--hair);padding-left:0}
+}
+@media print{nav.toc{display:none}.shell{display:block}}
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="kicker">技术洞察报告 · 语音交互 · <b>Side Talk 专题</b></div>
+  <h1>全双工交互中的 <strong>Side Talk</strong><br>定义、指标与评测</h1>
+  <p class="sub">学术界 × 产业界 双线洞察 —— 术语谱系、指标体系、基准全解、宣称口径与方法学缺口</p>
+  <div class="meta">
+    <div><span>日期</span>2026-11-16</div>
+    <div><span>调研方法</span>6 路并行深挖 · ≥78 次独立检索 · 关键来源逐字核查</div>
+    <div><span>覆盖</span>学术基准族 / 国际平台 / 国内大厂 / 硬件场景</div>
+    <div><span>信度</span>三级分级 · 未核实条目明确降级</div>
+  </div>
+</header>
+
+<div class="shell">
+<nav class="toc">
+  <div class="t">目录</div>
+  <a href="#s0"><b>00</b>核心结论</a>
+  <a href="#s1"><b>01</b>概念界定与术语</a>
+  <a href="#s2"><b>02</b>学术 · 定义与机制</a>
+  <a href="#s3"><b>03</b>学术 · 指标与基准</a>
+  <a href="#s4"><b>04</b>产业 · 国际</a>
+  <a href="#s5"><b>05</b>产业 · 国内</a>
+  <a href="#s6"><b>06</b>硬件场景与评测实践</a>
+  <a href="#s7"><b>07</b>学术 vs 产业对照</a>
+  <a href="#s8"><b>08</b>关键数字速查</a>
+  <a href="#s9"><b>09</b>写作建议</a>
+  <a href="#s10"><b>10</b>来源清单</a>
+  <a href="#s11"><b>11</b>方法与信度</a>
+</nav>
+
+<main>
+
+<section id="s0">
+  <div class="folio">00 / Executive Summary</div>
+  <h2>核心结论 <em>· 十条</em></h2>
+  <ol class="findings">
+    <li><strong>side talk 不是新问题，是 25 年前就有名字的老问题的新马甲。</strong>2001 年 Oppermann 等在 EUROSPEECH 提出 Off-Talk（与 on-talk 二分）——"说话人对第三方或自己的、非指向计算机系统的语音"；2025-2026 全双工浪潮中它以 side talk / side conversation / talking to others / off-talk / side-talk rejection 等近义词重现，<strong>至今没有统一定义</strong>。</li>
+    <li><strong>学术界已把 side talk 做成可评测对象</strong>，四大锚点：Full-Duplex-Bench v1.5 的 talking to others 场景、Duplex-MPE 的 N1/N2/N3 沉默标签与 silence preservation、ECHO 的 off-talk 条件与 pair accuracy、DuplexLedger 的 dedicated side-talk stage。</li>
+    <li><strong>同一个词横跨两个问题域。</strong>可穿戴/ASR 社区的 side talk 主体是旁观者（声学层拒绝）；全双工对话社区的 side talk 主体是对话用户本人（对话策略层：不接话、不让权、不打断主线）。引用文献必须先问"主体是谁"。</li>
+    <li><strong>学术指标已收敛出"三件套"</strong>：行为分类（Respond/Resume/…，LLM-as-judge）＋ 沉默保持（silence preservation / side-talk rejection）＋ 时延对（stop/response latency）；辅以韵律适应与人类基线（约 200ms）。</li>
+    <li><strong>产业界几乎不用 "side talk" 一词。</strong>国际口径：background speech / device-directed speech (DDSD) / interruption sensitivity；国内口径：抗干扰、无关对话、抢话、误打断、误回复、动态判停。对字节/火山/达摩院 6 个官方页面全文正则检索，<code>sidetalk|side talk|旁白|侧说话</code> <strong>0 命中</strong>。</li>
+    <li><strong>国内已形成自有指标体系</strong>：Seeduplex（2026-04）宣称复杂场景误回复率/误打断率相对半双工减半、抢话比例 -40%、判停延迟 -250ms、打断响应延迟 -300ms、判停 MOS +8%、流畅度 MOS +12%、A/B 满意度 +8.34%——全部为<strong>相对自家上一代的相对值</strong>，跨厂商不可比。</li>
+    <li><strong>机制收敛为两条路线</strong>：声学层拒绝（去噪/VAD/DDSD 级联/多音区锁定）与语义层选择参与（状态机、Full Duplex Predictor、语义打断、VAP 轮次预测）；端到端原生全双工正把判定内化进主模型。</li>
+    <li><strong>拦截强度 vs 响应速度的权衡被官方文档反复承认</strong>：Vapi"slightly delay the detection of speech onset"；阿里云百炼"开启语义判停与拒识后可能导致对话延迟增加"；学术侧总结为 repair-first vs continuity-first。</li>
+    <li><strong>评测成熟度存在代差</strong>：学术已有自动化可复现场景基准族并出现方法学自省；产业公开指标只有硬件唤醒层 FAR/FRR（成熟）与大厂相对值宣称（不可比），国际平台层黑箱，国内第三方评测无专项。</li>
+    <li><strong>"会沉默"≠"听懂了不该接"。</strong>Duplex-MPE 显示文本模型对名字线索敏感（响应率差 64.3pp），五个语音模型全部不显著（最小 p=0.2365）——旁白拒绝得好可能只是"普遍不响应"的副产品；必须配应答正确率一起读。</li>
+  </ol>
+</section>
+
+<section id="s1">
+  <div class="folio">01 / Concept</div>
+  <h2>概念界定 <em>· 什么是 side talk</em></h2>
+  <p class="lede">全双工语音交互中，声学上进入拾音范围、语用上不指向系统的人声，就是 side talk。它必须与插话、反馈语、背景语音严格区分——这三个邻居恰好对应系统三种不同的正确动作。</p>
+
+  <div class="def">
+    <div class="t">工作定义</div>
+    <p><strong>全双工（full-duplex）</strong>：系统在说话的同时持续聆听，双方语音流可重叠，无需轮流占用信道。</p>
+    <p><strong>Side talk（旁白/旁语）</strong>：典型三类——(a) 对话中的用户转头对第三人说话；(b) 旁观者之间的对话；(c) 用户自言自语/思考出声。系统理想行为：<strong>不响应、不让权、不遗忘主线，事后平滑接回</strong>。</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 840 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="半双工与全双工时序对比">
+      <g font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#8f887d">
+        <text x="0" y="16">HALF-DUPLEX（半双工 · 轮流占用信道）</text>
+        <text x="0" y="170">FULL-DUPLEX（全双工 · 听说同步 + 旁白守卫）</text>
+      </g>
+      <g font-family="Helvetica,PingFang SC,sans-serif" font-size="11.5">
+        <!-- half duplex labels -->
+        <text x="0" y="42" fill="#5f5a52">用户</text>
+        <text x="0" y="92" fill="#5f5a52">系统</text>
+        <!-- user speech blocks -->
+        <rect x="44" y="30" width="120" height="16" fill="#141311"/>
+        <rect x="284" y="30" width="90" height="16" fill="#141311"/>
+        <rect x="470" y="30" width="130" height="16" fill="#141311"/>
+        <!-- system speech blocks -->
+        <rect x="180" y="80" width="90" height="16" fill="#d6d1c8"/>
+        <rect x="390" y="80" width="66" height="16" fill="#d6d1c8"/>
+        <rect x="616" y="80" width="120" height="16" fill="#d6d1c8"/>
+        <!-- wait markers -->
+        <text x="284" y="92" fill="#8f887d">等待中</text>
+        <text x="470" y="92" fill="#8f887d">等待中</text>
+        <text x="664" y="42" fill="#8f887d">等待中</text>
+        <!-- full duplex labels -->
+        <text x="0" y="196" fill="#5f5a52">用户</text>
+        <text x="0" y="246" fill="#5f5a52">系统</text>
+        <text x="0" y="286" fill="#5f5a52">旁白</text>
+        <!-- full duplex simultaneous speech -->
+        <rect x="44" y="184" width="150" height="16" fill="#141311"/>
+        <rect x="44" y="234" width="260" height="16" fill="#d6d1c8"/>
+        <!-- user interrupts over system -->
+        <rect x="180" y="184" width="110" height="16" fill="#141311"/>
+        <!-- side talk segment -->
+        <rect x="330" y="274" width="150" height="12" fill="#a3451f"/>
+        <rect x="330" y="184" width="150" height="16" fill="#141311"/>
+        <!-- system keeps talking through side talk -->
+        <rect x="316" y="234" width="180" height="16" fill="#d6d1c8"/>
+        <!-- after side talk resume -->
+        <rect x="540" y="184" width="120" height="16" fill="#141311"/>
+        <rect x="520" y="234" width="150" height="16" fill="#d6d1c8"/>
+        <rect x="640" y="274" width="90" height="12" fill="#d6d1c8" opacity=".55"/>
+        <!-- annotations -->
+        <text x="180" y="176" fill="#5f5a52">插话 → 系统让权</text>
+        <text x="330" y="176" fill="#a3451f">side talk → 系统不接话</text>
+        <text x="540" y="176" fill="#5f5a52">主线接回</text>
+        <text x="520" y="262" fill="#8f887d">持续输出不中断</text>
+        <text x="664" y="286" fill="#8f887d">背景人声</text>
+      </g>
+    </svg>
+    <figcaption>半双工按"一问一答"轮流占用信道；全双工下系统边说边听——用户插话需让权（Yield），用户对第三人说话（side talk，赭色）需保持输出不接话，背景人声需过滤。图示对应 Full-Duplex-Bench v1.5 四场景的行为语义。</figcaption>
+  </figure>
+
+  <h3><span class="n">1.1</span>学术操作化定义（逐字）</h3>
+  <table>
+    <tr><th style="width:24%">文献 / 基准</th><th style="width:18%">术语</th><th>原文定义（verbatim）</th></tr>
+    <tr><td>Full-Duplex-Bench v1.5</td><td><span class="en">side conversation</span></td><td class="q">"side conversations, where the user briefly addresses someone else while the model is speaking"</td></tr>
+    <tr><td>Full-Duplex-Bench v1.5（新版摘要）</td><td><span class="en">talking to others</span></td><td class="q">四场景之一："user interruption, user backchannel, talking to others, and background speech"</td></tr>
+    <tr><td>DuplexLedger</td><td><span class="en">side-talk stage</span></td><td class="q">"Speech directed to another person is played through a dedicated side-talk stage and is marked as not addressed to the assistant."</td></tr>
+    <tr><td>Duplex-MPE</td><td><span class="en">N2 / N3 标签</span></td><td class="q">"N2: the turn is addressed to someone or something other than Aria… N3: speech without a designated addressee, including self-talk and thinking aloud. N1, N2 and N3 require silence."</td></tr>
+    <tr><td>ECHO</td><td><span class="en">off-talk</span></td><td class="q">"It additionally includes off-talk examples for diagnosing unnecessary yielding."（目标动作 Keep——系统不应让出话轮）</td></tr>
+    <tr><td>数据合成 Harness</td><td><span class="en">speech addressed to a third party</span></td><td class="q">"must distinguish … an interruption that requests a turn from a brief acknowledgment or speech addressed to a third party"</td></tr>
+  </table>
+
+  <h3><span class="n">1.2</span>术语演化时间线</h3>
+  <div class="timeline">
+    <div class="tl-item"><div class="y">1972 / 1981</div><div class="what">side sequence（Jefferson）· byplay 与 ratified participant / overhearer（Goffman）</div><div class="note">会话分析源头：参与框架与从属序列——思想先祖，非工程术语</div></div>
+    <div class="tl-item"><div class="y">2001</div><div class="what">Off-Talk（与 on-talk 二分）——Oppermann et al., EUROSPEECH 2001</div><div class="note">"Off-Talk – A Problem for Human-Machine-Interaction"；HCI/语音界面语境</div></div>
+    <div class="tl-item"><div class="y">2008-2019</div><div class="what">off-talk 检测 · SmartWeb 语料 · Batliner on/off-talk 分类学</div><div class="note">智能语音助手时代的检测任务</div></div>
+    <div class="tl-item"><div class="y">2010s-2020s</div><div class="what">device-directed speech detection（DDSD）· addressee detection</div><div class="note">智能音箱（Amazon/Apple，FAR/FRR 评测）与多方对话（含 gaze 多模态）两支并行</div></div>
+    <div class="tl-item"><div class="y">2025-07</div><div class="what">side-talk rejection（可穿戴）· side conversation（全双工基准）</div><div class="note">MMW 智能眼镜 + Full-Duplex-Bench v1.5——同一术语进入两个社区</div></div>
+    <div class="tl-item"><div class="y">2026</div><div class="what">side-talk stage · off-talk · Sidetalk 类目 · talking to others（改名）</div><div class="note">DuplexLedger / ECHO / CoDeTT / FDB 新版——基准协议中的标准事件</div></div>
+  </div>
+
+  <h3><span class="n">1.3</span>概念边界（最容易写错的部分）</h3>
+  <table>
+    <tr><th style="width:22%">概念</th><th style="width:38%">与 side talk 的区别</th><th>一句话判据</th></tr>
+    <tr><td>barge-in / interruption（插话）</td><td>争夺话轮，指向当前说话方</td><td>v1.5："speaks over others, violating their turn to speak"；ECHO 目标动作 Yield</td></tr>
+    <tr><td>backchannel（反馈语/附和）</td><td>不夺权，但指向当前说话方</td><td>v1.5："signal attention but do not claim the floor"；ECHO 目标动作 Keep</td></tr>
+    <tr><td>ambient / background speech</td><td>共享声学通道但非对话参与方（电视、广播、远处旁人）</td><td>v1.5："shares the acoustic channel but is not directed at the system"</td></tr>
+    <tr><td><span class="accent-cell">side talk（旁白）</span></td><td><span class="accent-cell">对话参与方（用户或在场者）说出、但指向第三方/自己</span></td><td>v1.5："the user briefly addresses someone else"</td></tr>
+    <tr><td>false trigger（误触发）</td><td>side talk 拒绝失败的下游后果</td><td>唤醒词时代=误唤醒；全双工时代=误回复</td></tr>
+    <tr><td>sidetone（侧音）</td><td>耳机/电话里用户自己声音的回放，与 side talk 无关</td><td>电信术语，仅词形相近</td></tr>
+    <tr><td>Google Duplex</td><td>外呼任务型 agent，非全双工旁白问题</td><td>概念辨析必备</td></tr>
+  </table>
+  <p><small>两处高频误用：① 把 "off-talk rate" 当"旁白发生率"——ECHO 里它是模型在 off-talk 条件上的错误率（低=好）；② 把可穿戴 side-talk rejection 与全双工 side talk 混为一谈——前者是 ASR 前端声学拒绝，后者是对话策略的语义选择参与。</small></p>
+</section>
+
+<section id="s2">
+  <div class="folio">02 / Academia · Definitions & Mechanisms</div>
+  <h2>学术界洞察（一） <em>· 定义操作化与机制流派</em></h2>
+
+  <h3><span class="n">2.1</span>定义操作化的四个基准锚点</h3>
+  <p><strong>Full-Duplex-Bench v1.5</strong> 把重叠语音拆成四类可控事件（user interruption / user backchannel / talking to others / background speech），每个 trial 用 4 要素参数化（上文查询、重叠时机、重叠内容、说话人身份与声学通道），以重叠结束时刻切分 pre/post-overlap 行为窗。<strong>Duplex-MPE</strong> 把"何时开口/沉默/停止"变成标签问题——T（对助手的直接请求）、N1（提及未请求）、N2（对他人/他物）、N3（无受话人含自言自语）、N4（应答后须停）。<strong>ECHO</strong> 用成对改写设计：同一重叠转写、两种前置上下文（一个要求 Yield、一个要求 Keep），pair accuracy 对成对成员同时判对才给分，杜绝固定动作策略刷分。<strong>DuplexLedger</strong> 把 side-talk 事件嵌入持久记忆协议（1.2 秒观测窗），考察"该忽略的没忽略"是否污染记忆。</p>
+
+  <h3><span class="n">2.2</span>机制五大流派（side talk 在哪里被处理）</h3>
+  <table>
+    <tr><th style="width:17%">流派</th><th style="width:22%">代表</th><th style="width:26%">机制</th><th>side talk 的处理位置与局限</th></tr>
+    <tr><td>① 双流并行隐式学习</td><td>Moshi · OmniFlatten · LSLM</td><td>用户声道+自身声道同时建模，时间块交错</td><td>无显式判定——旁人语音原样进入用户流；v1.5 实测 Moshi 在 talking_other 场景 Unknown 0.59</td></tr>
+    <tr><td>② 显式状态机</td><td>neural FSM · SALMONN-omni · Freeze-Omni · VITA-1.5</td><td>listening/thinking/speaking 状态转移；SALMONN-omni 三流 80ms 交错+动态状态控制 token；VITA-1.5 双阈值 VAD</td><td>状态转移规则+背景声守卫（工程级）；阈值硬编码、易误杀 backchannel、状态边界引入延迟</td></tr>
+    <tr><td>③ 全双工预测模块</td><td>MinMo Full Duplex Predictor</td><td>LLM 语义决策"继续说/停/轮次"，4000h 真人长对话训练</td><td>面向轮次而非受话人；全文 0 处 side-talk 术语</td></tr>
+    <tr><td>④ VAP 轮次预测</td><td>VAP（KTH）· 三方 VAP · MuVAP</td><td>自监督预测双方未来语音活动，流式 Shift/Hold</td><td>天然容纳多方重叠；MuVAP 用人脸轨迹锚定说话人；但只做活动预测，需与 LLM 级联</td></tr>
+    <tr><td>⑤ DDSD/addressee 检测器级联</td><td>Amazon 系 DDSD 论文群 · 多模态 DDSD（LLM）</td><td>VAD 后接二分类器："这句话是否指向设备"</td><td>显式处理：非指向则静默；级联延迟与错误传播，多为唤醒词触发后的 follow-up 场景</td></tr>
+  </table>
+
+  <div class="metrics">
+    <div class="metric"><div class="v"><b>2</b> 条路线</div><div class="l">声学层拒绝 × 语义层选择参与——机制叙事的最终收敛形态</div></div>
+    <div class="metric"><div class="v">80<small>ms</small></div><div class="l">SALMONN-omni 三流时间块粒度</div></div>
+    <div class="metric"><div class="v">4,000<small>h</small></div><div class="l">MinMo Full Duplex Predictor 训练用真人长对话</div></div>
+    <div class="metric"><div class="v">800<small>h</small></div><div class="l">DuplexDrama 双语合成全双工对话数据</div></div>
+  </div>
+
+  <h3><span class="n">2.3</span>2026 年新动向</h3>
+  <p>side talk 进入训练数据合成：Harness（LLM 编剧→意图标注→双通道合成）与 DuplexDrama 把旁白编码为可编程"意图事件"；Lychee-FD（ACL 2026）报告 incidental side-talk 处理难度。同时注意：2026 年有论文直言"目前多数端到端语音 LLM 仍以半双工方式运行，如 Kimi-Audio、Step-Audio 2、MiMo-Audio、GLM-4-Voice"——<strong>半双工是开源界的事实常态</strong>。</p>
+</section>
+
+<section id="s3">
+  <div class="folio">03 / Academia · Metrics & Benchmarks</div>
+  <h2>学术界洞察（二） <em>· 指标与基准</em></h2>
+
+  <h3><span class="n">3.1</span>指标三件套（可直接引用的金指标）</h3>
+  <table>
+    <tr><th style="width:20%">指标族</th><th style="width:34%">指标</th><th>定义 / 计算方式</th></tr>
+    <tr><td>行为分类</td><td>Respond / Resume / Uncertain / Unknown / silence</td><td>post-overlap 语音 → ASR 词级时间戳（parakeet-tdt-0.6b-v2）→ LLM（GPT-4o）五分类</td></tr>
+    <tr><td>沉默保持</td><td><span class="accent-cell">silence preservation</span> · side-talk rejection · complete rejection</td><td>Duplex-MPE："Fraction of N1, N2 and N3 windows with no speech or only a brief acknowledgement that does not take the floor"</td></tr>
+    <tr><td>时延对</td><td>stop latency · response latency</td><td>重叠起点→模型停止；重叠结束→模型下次开口。人类基线约 200ms（Levinson & Torreira，经 v1.5 引用）</td></tr>
+    <tr><td>诊断类</td><td>pair accuracy（ECHO）· fresh-onset response rate · conditional answer accuracy · answering-window yield</td><td>成对同时判对才给分；新起音应答率；条件应答正确率；该停时停比例</td></tr>
+    <tr><td>辅助</td><td>UTMOSv2 MOS · pitch/intensity/speaking rate · FTO · VAP Shift/Hold · 显式/隐式称呼差（McNemar）</td><td>韵律适应配对 t 检验 p&lt;0.05；FTO=话权转移间隔（负值=重叠）</td></tr>
+  </table>
+
+  <h3><span class="n">3.2</span>Full-Duplex-Bench v1.5 · 场景 × 结果（已全文核实）</h3>
+  <table>
+    <tr><th style="width:20%">场景</th><th style="width:34%">构造要点</th><th>关键结果（五个 SOTA 模型）</th></tr>
+    <tr><td>user_intr</td><td>用户打断，200 样本</td><td>策略分化：repair-first vs continuity-first</td></tr>
+    <tr><td>user_backch</td><td>反馈语，99 样本</td><td>部分模型误把反馈语当打断</td></tr>
+    <tr><td><span class="accent-cell">talking_other</span></td><td>同一用户音色对第三人说话：-8dB、4kHz 高频衰减、45/120ms 混响；100 样本</td><td><span class="accent-cell">Gemini 0.99 / Nova Sonic 0.90 以 Resume 保持不打扰；GPT-4o 0.91 Respond（旁白误接话）；Freeze-Omni 0.58；Moshi Unknown 0.59</span></td></tr>
+    <tr><td>bkg_speech</td><td>不同音色、-15dB、3kHz 低通、回声；100 样本</td><td>Sonic Resume 0.98 最稳；GPT-4o Respond 0.93（把背景声当用户意图）；Gemini Respond 0.70</td></tr>
+    <tr><td>时延（talking_other）</td><td>stop | response（秒）</td><td>GPT-4o 0.18|1.16 · Moshi 0.87|2.38 · Freeze 1.39|1.32 · Gemini 1.69|1.78 · Sonic 1.77|2.04</td></tr>
+  </table>
+  <p>总体结论：重叠后重入延迟 1.16-2.76s，比人类约 200ms <strong>慢 5-6 倍</strong>；出现 repair-first（≤300ms 让权但易误触发）与 continuity-first（保流畅但多秒 double-talk）两派。</p>
+
+  <h3><span class="n">3.3</span>Duplex-MPE · 多人共享对话的选择性参与（已全文核实）</h3>
+  <p>2,000 场景 ×3-4 名说话人+1 助手，显式/隐式称呼成对 → 4,000 段评测对话共 110.93h（Claude Opus 5 写脚本 + Qwen3-TTS 合成，事件级 gold 边界）。四计分指标：fresh-onset response rate / conditional answer accuracy / <strong>silence preservation</strong> / answering-window yield。</p>
+  <div class="compare">
+    <div>
+      <div class="h">沉默保持率 · 显式称呼</div>
+      <ul>
+        <li>MiniCPM-o 4.5 <span class="accent-cell">0.9242</span></li>
+        <li>Voila 0.8351</li>
+        <li>FLM-Audio 0.3957</li>
+        <li>Moshi 0.2734</li>
+        <li>Freeze-Omni 0.0002（20,360 个该沉默窗口只保住 5 个）</li>
+      </ul>
+    </div>
+    <div>
+      <div class="h">方法学警示</div>
+      <ul>
+        <li>MiniCPM-o 对非对准请求仍误响应 4.6%（216/4,704）</li>
+        <li>指标选择改变排名：presence 与 fresh-onset 的 Spearman −0.4303</li>
+        <li>文本参考（Gemini 3.1 Pro）对显式/隐式称呼差 64.3pp；五个语音模型全部不显著（最小 p=0.2365）</li>
+        <li>FLM-Audio 1,901 个有语音请求中仅 2 个答案正确</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="n">3.4</span>其他基准与数据资产</h3>
+  <table class="tight">
+    <tr><th style="width:22%">基准 / 资产</th><th style="width:38%">定位</th><th>side talk 相关</th></tr>
+    <tr><td>Full-Duplex-Bench v1</td><td>四行为自动化评测（pause/backchannel/turn-taking/interruption）</td><td>前代框架；逐场景指标二手未核</td></tr>
+    <tr><td>FD-Bench（Interspeech 2025）</td><td>LLM+TTS+ASR 全双工评测流水线</td><td>打断/延迟/鲁棒性；快照级</td></tr>
+    <tr><td>ECHO</td><td>中文成对轮次诊断</td><td>off-talk 条件 + pair accuracy；三系统 over-yielding（backchannel 正确保持 &lt;13%）</td></tr>
+    <tr><td>DuplexLedger</td><td>双语事务记忆（1,094 会话）</td><td>side-talk stage（1.2s 观测窗）+"该忽略未忽略"进记忆</td></tr>
+    <tr><td>WearVox</td><td>AI 眼镜自中心多通道语料（3,842 段）</td><td>五任务之一 = side-talk rejection</td></tr>
+    <tr><td>HumDial</td><td>双通道真人对话</td><td>complete rejection 四子场景（转引）</td></tr>
+    <tr><td>Harness / DuplexDrama</td><td>全双工训练数据合成</td><td>旁白 = 可编程意图事件</td></tr>
+    <tr><td>FDB v2/v3 · "Take the Floor"</td><td>多轮/流式/工具调用扩展</td><td>扩展线（快照级）</td></tr>
+  </table>
+
+  <h3><span class="n">3.5</span>方法学争论（批判视角）</h3>
+  <ol class="findings" style="counter-reset:f">
+    <li>术语不统一、指标名不收敛，跨基准数值不可直接比较（Resume 0.99 与 silence preservation 0.9242 分母完全不同）。</li>
+    <li>单一聚合指标掩盖行为——Spearman −0.4303 实证"指标选择改排名"。</li>
+    <li>合成数据 vs 真实录音之争（可控性 vs 真实感；HumDial/WearVox 补位）。</li>
+    <li>半双工模型"不可评"还是"不公平"？Duplex-MPE 拒绝评半双工（协议不兼容），意味着无法回答"半双工+VAD 方案在旁白场景差多少"。</li>
+    <li>LLM-as-judge 依赖人工抽检兜底（Duplex-MPE 报 99/100、98/100 一致率）。</li>
+    <li>"拒绝得好"存在歧义：可能是受话人推断，也可能是普遍迟钝。</li>
+    <li>Jefferson/Goffman 是思想先祖而非术语出处——2025-2026 全双工文献并未回溯引用。</li>
+  </ol>
+</section>
+
+<section id="s4">
+  <div class="folio">04 / Industry · Global</div>
+  <h2>产业界洞察（一） <em>· 国际</em></h2>
+  <p class="lede">国际产业界官方文档不使用 "side talk"。最接近的官方概念：Amazon 的 device-directed speech、平台层的 background speech、OpenAI 的 turn detection / interruption handling。side talk 被拆解进四级流水线。</p>
+
+  <h3><span class="n">4.1</span>四级流水线</h3>
+  <table>
+    <tr><th style="width:8%">层</th><th style="width:26%">职能</th><th>代表实现</th></tr>
+    <tr><td>①</td><td>前端降噪 / 回声消除</td><td>ElevenLabs WebRTC · Vapi 双去噪器 · LiveKit voice isolation · Amazon implicit AEC</td></tr>
+    <tr><td>②</td><td>VAD / 语音起点</td><td>各平台 VAD 阈值、min_interruption_duration 类参数</td></tr>
+    <tr><td>③</td><td>端点 / 轮次判定</td><td>OpenAI server_vad / semantic_vad（eagerness）· Pipecat Smart Turn · Hume 韵律 end-of-turn</td></tr>
+    <tr><td>④</td><td>打断执行策略</td><td>cancel-and-regenerate · pause-and-resume（LiveKit：嘈杂线路多为"假打断"）· preemptive generation</td></tr>
+  </table>
+
+  <h3><span class="n">4.2</span>指标：硬件层成熟，平台层黑箱</h3>
+  <p><strong>成熟的一层（硬件唤醒）</strong>：Amazon Science 论文实锤 DDSD 评测口径——"We use false reject rate (FRR) and false accept rate (FAR) as our metrics and report FRR at two fixed FAR values (non-playback and playback)"（区分设备自外放与不放声两种条件）。<strong>黑箱的一层（模型/平台）</strong>：OpenAI / Google / AWS / ElevenLabs / Vapi / Retell / LiveKit / Pipecat / Hume 的公开文档均未公布误打断率、误触发率数值或基准集；只有定性故障树（Retell："agent 抢话 → endpointing 太短"）与第三方小样本测量博客。<strong>任何"行业误打断率 X%"的数据都应视为不可信。</strong></p>
+
+  <h3><span class="n">4.3</span>三组已核实的工程张力</h3>
+  <ol class="findings">
+    <li><strong>防误打断 vs 响应速度</strong>：Vapi 官方承认防背景打断阈值 "even if it slightly delays the detection of speech onset"。</li>
+    <li><strong>预生成 vs 浪费算力</strong>：LiveKit preemptive generation "doesn't always reduce latency"。</li>
+    <li><strong>降噪过度 vs 保真</strong>：Retell 社区投诉降噪连真实第二说话人一起消掉（2026-02 社区帖，二手）。</li>
+  </ol>
+</section>
+
+<section id="s5">
+  <div class="folio">05 / Industry · China</div>
+  <h2>产业界洞察（二） <em>· 国内</em></h2>
+
+  <h3><span class="n">5.1</span>代际时间线（"全双工"的定义权叙事）</h3>
+  <div class="timeline">
+    <div class="tl-item"><div class="y">2019-07</div><div class="what">百度小度发布"全双工免唤醒"（小度助手 5.0）+ 首创"拒绝反应"</div><div class="note">智能音箱时代；官方宣传"在与他人对话的同时互不干扰地实现人机交互"</div></div>
+    <div class="tl-item"><div class="y">2025-01-20</div><div class="what">字节发布豆包实时语音大模型（端到端、可随时打断）</div><div class="note">当时未称全双工；2026 年被官方追认为"上一代半双工"</div></div>
+    <div class="tl-item"><div class="y">2025-01</div><div class="what">达摩院 MinMo 论文：Full Duplex Predictor（4000h 真人对话训练）</div><div class="note">延迟口径：STT ~100ms；全双工理论 600ms / 实践 800ms；user turn-taking 250ms；assistant ~660ms；评测用正类 F1 + offset distance K</div></div>
+    <div class="tl-item"><div class="y">2026-03-30</div><div class="what">阿里 Qwen3.5-Omni：官方宣布"语义打断"，API 原生支持</div><div class="note">自动识别 turn-taking 意图，"避免附和和无意义背景音打断"</div></div>
+    <div class="tl-item"><div class="y">2026-04-09</div><div class="what">字节 Seeduplex 原生全双工语音大模型（豆包 App 全量上线）</div><div class="note">精准抗干扰 + 动态判停；"听懂哪些话是针对自己发出的指令，哪些只是他人之间的闲聊"</div></div>
+    <div class="tl-item"><div class="y">2026-06-18</div><div class="what">豆包实时语音模型 3.0 API（Seeduplex 全双工版，火山引擎 Realtime 事件协议）</div><div class="note">"边听边说边办事"</div></div>
+    <div class="tl-item"><div class="y">2026-08-05</div><div class="what">字节 SeedRealtime 音视频全双工大模型</div><div class="note">"能分辨旁人闲聊与背景噪声，不因干扰误触发"；节奏问题较级联模型减少一半</div></div>
+  </div>
+
+  <h3><span class="n">5.2</span>Seeduplex 官方指标（相对半双工上一代 · 官方博客逐字核实）</h3>
+  <div class="metrics">
+    <div class="metric"><div class="v"><b>-50%</b></div><div class="l">误回复率 + 误打断率<br>复杂声学干扰场景</div></div>
+    <div class="metric"><div class="v"><b>-40%</b></div><div class="l">抢话比例（相对下降）</div></div>
+    <div class="metric"><div class="v"><b>-250ms</b></div><div class="l">判停延迟</div></div>
+    <div class="metric"><div class="v"><b>-300ms</b></div><div class="l">打断响应延迟</div></div>
+    <div class="metric"><div class="v"><b>+8%</b></div><div class="l">判停 MOS</div></div>
+    <div class="metric"><div class="v"><b>+12%</b></div><div class="l">对话流畅度 MOS</div></div>
+    <div class="metric"><div class="v"><b>+8.34%</b></div><div class="l">A/B 通话满意度（绝对值）</div></div>
+  </div>
+  <p><small>读数纪律：以上全部是"相对自家上一代"或未公开评测协议的数值；样本量、人群、量表未公开——跨厂商引用必须注明口径。官方自承：整体对话流畅度与真实人人对话"仍有不小差距"。</small></p>
+
+  <h3><span class="n">5.3</span>国内术语矩阵（谁用哪个词）</h3>
+  <table>
+    <tr><th style="width:26%">术语</th><th style="width:34%">使用者</th><th>备注</th></tr>
+    <tr><td>全双工/半双工 · 边听边说</td><td>字节（代际叙事）、全体</td><td>字节把"可打断的端到端"追认为半双工</td></tr>
+    <tr><td>抗干扰 · 动态判停/判停</td><td>字节/火山（三大优势之二）</td><td>指标化最充分</td></tr>
+    <tr><td>抢话 · 误打断 · 误回复 · 抢断</td><td>字节官方 + 社区</td><td>成对指标词族</td></tr>
+    <tr><td>语义打断</td><td>阿里 Qwen3.5-Omni（自称"独家"）</td><td>turn-taking 意图识别</td></tr>
+    <tr><td>附和</td><td>字节（未来方向）、阿里</td><td>= backchannel 的中文化</td></tr>
+    <tr><td>拒绝反应</td><td>百度小度（2019，独有）</td><td>国内最早的"抗旁白干扰"产品化表述</td></tr>
+    <tr><td><span class="accent-cell">旁白 / 侧说话 / sidetalk</span></td><td><span class="accent-cell">国内产业官方文本 0 命中</span></td><td>6 个官方页面全量正则检索；引用需自行映射</td></tr>
+  </table>
+
+  <h3><span class="n">5.4</span>机制叙事收敛</h3>
+  <p>字节（"语音语义联合建模替代外部 VAD 机械切音"）、阿里（"语义打断 / turn-taking 意图识别"）、达摩院（"Full Duplex Predictor 用 LLM 语义决策"）——三家机制话术高度同构，且没有任何一家在别人家的公开测试集上跑过；区分度目前只能靠官方宣称与产品体验。</p>
+</section>
+
+<section id="s6">
+  <div class="folio">06 / Industry · Devices & Evaluation</div>
+  <h2>产业界洞察（三） <em>· 硬件场景与评测实践</em></h2>
+
+  <h3><span class="n">6.1</span>场景 × 指标对照</h3>
+  <table>
+    <tr><th style="width:16%">场景</th><th style="width:44%">side talk 的产品化形态</th><th>公开指标与成熟度</th></tr>
+    <tr><td>智能音箱（唤醒态）</td><td>唤醒词门控天然挡住旁白</td><td>误唤醒率（TAF 标准："听到与唤醒词相近的音…被误触发"）、唤醒率、响应时间——成熟</td></tr>
+    <tr><td>智能音箱（全双工免唤醒态）</td><td>小度 2019"与他人对话互不干扰"+"拒绝反应"</td><td>仅功能声明，无数值——早期</td></tr>
+    <tr><td>车载座舱</td><td>多音区锁定/音区隔离：理想四音区锁定（2021 OTA，可"关闭副驾驶音区"）、小鹏双音区锁定（2020，动机即"其他乘客说话干扰"）、蔚来 NOMI 免唤醒下辨别四人交叠指令（2024 官方）、鸿蒙座舱四音区定位；亿欧：双音区锁定 20s-120s 时间窗</td><td>全部为功能声明；无"旁白拦截率"数值——最产品化</td></tr>
+    <tr><td>AI 眼镜</td><td>Rokid Glasses 2 多人说话区分（听障字幕向）；雷鸟 V3 连续对话/可打断双模式；"用户与旁人交谈不抢答"官方表述未见</td><td>——萌芽</td></tr>
+    <tr><td>机器人</td><td>唤醒词+超时门控（宇树 G1"15 秒没声音退出"）；讯飞"智能语音背包"（麦克风阵列+全双工套件）</td><td>门控式，非语义拦截</td></tr>
+  </table>
+
+  <h3><span class="n">6.2</span>评测体系现状</h3>
+  <ul style="list-style:none;max-width:66ch">
+    <li style="padding:10px 0;border-bottom:1px solid var(--hair)"><strong>TAF 团体标准</strong>只覆盖唤醒态"误唤醒率"——side talk 发生在免唤醒/全双工态，现行标准没有对应条目。</li>
+    <li style="padding:10px 0;border-bottom:1px solid var(--hair)"><strong>中国信通院（CAICT）</strong>：本次检索范围内未见语音全双工/抗干扰专项（检索空结论，存在漏检可能）。</li>
+    <li style="padding:10px 0;border-bottom:1px solid var(--hair)"><strong>SuperCLUE 实时语音基准（2024-12）</strong>：4 维度 15 项能力，含全双工/打断专项未核实；当时评测综述把"全双工对话评测"列为未来展望。</li>
+    <li style="padding:10px 0;border-bottom:1px solid var(--hair)"><strong>商业测试公司已先行</strong>：Roark / Evalgent 把"背景对话导致 derail""mm-hm 类附和误停""抢话"列为全双工必测失效面（2026-09，二手）。</li>
+    <li style="padding:10px 0"><strong>在线指标</strong>：可确认的官方口径只有阿里云百炼——"语义判停与拒识"产品开关，目标是"避免误打断、误唤醒"，并承认"开启后可能导致对话延迟增加"。</li>
+  </ul>
+  <p><strong>结论：产品走到了标准与评测前面。</strong>全双工把 side talk 问题放大而非解决——半双工+唤醒词天然挡住旁白；全双工免唤醒后系统"一直在听"，忽略旁白从外围工程变成核心能力，而公开评测体系尚未跟上。</p>
+</section>
+
+<section id="s7">
+  <div class="folio">07 / Side-by-side</div>
+  <h2>学术界 vs 产业界 <em>· 对照总表</em></h2>
+  <table>
+    <tr><th style="width:12%">维度</th><th style="width:30%">学术界</th><th style="width:28%">产业界 · 国际</th><th>产业界 · 国内</th></tr>
+    <tr><td>术语</td><td>off-talk / side conversation / talking to others / side-talk stage / side-talk rejection</td><td>background speech / device-directed speech (DDSD) / interruption sensitivity</td><td>抗干扰 / 无关对话 / 抢话 / 误打断 / 误回复 / 动态判停 / 拒绝反应；不用 sidetalk</td></tr>
+    <tr><td>定义方式</td><td>基准协议内的操作性定义（场景构造+标签体系）</td><td>产品文档级（配置参数与功能边界）</td><td>发布会叙事+代际对立（半双工 vs 全双工）</td></tr>
+    <tr><td>主体假设</td><td>两种并存：旁观者（可穿戴）与对话用户本人（全双工对话）</td><td>对话用户 + 环境人声</td><td>主对话用户 + 旁人闲聊 / 车内其他音区</td></tr>
+    <tr><td>核心指标</td><td>行为五分类 · silence preservation · stop/response latency · pair accuracy · UTMOSv2 · F1+offset K</td><td>硬件层 FAR/FRR（成熟）；平台层无数值（黑箱）</td><td>相对上一代：误回复/误打断 -50%、抢话 -40%、判停 -250ms、打断 -300ms、MOS +8%/+12%、满意度 +8.34%</td></tr>
+    <tr><td>评测方法</td><td>场景化基准（TTS 合成+LLM-as-judge+人工抽检）· 真人对话基准</td><td>文档化配置+定性故障树+第三方小样本</td><td>大规模 A/B + 人工 MOS + 宣称对比</td></tr>
+    <tr><td>可复现性</td><td>高（开源基准+代码）</td><td>低（闭源 API，参数名可查数值不可查）</td><td>低（协议未公开）</td></tr>
+    <tr><td>最大缺口</td><td>真实多人重叠数据；跨基准不可比；半双工不可评</td><td>误打断率/误触发率无公开基准</td><td>无第三方专项；宣称口径不透明</td></tr>
+  </table>
+</section>
+
+<section id="s8">
+  <div class="folio">08 / Key Numbers</div>
+  <h2>关键数字速查 <em>· 全部经核查</em></h2>
+  <table class="tight">
+    <tr><th style="width:16%">数字</th><th style="width:44%">含义</th><th style="width:26%">来源</th><th>信度</th></tr>
+    <tr><td>~200ms</td><td>人类对话轮换间隔（人类基线）</td><td>v1.5 引 Levinson &amp; Torreira</td><td>高</td></tr>
+    <tr><td>1.16-2.76s</td><td>v1.5 实测系统重叠后重入延迟（最 responsive 慢 5-6 倍）</td><td>FDB v1.5</td><td>高</td></tr>
+    <tr><td>0.99 / 0.90</td><td>talking_other 场景 Gemini / Nova Sonic 的 Resume 占比（旁白保持最优）</td><td>FDB v1.5</td><td>高</td></tr>
+    <tr><td>0.91</td><td>GPT-4o 在 talking_other 的 Respond 占比（旁白误接话最重的 SOTA 之一）</td><td>FDB v1.5</td><td>高</td></tr>
+    <tr><td>0.9242</td><td>Duplex-MPE 显式称呼下 MiniCPM-o silence preservation（最高）</td><td>Duplex-MPE</td><td>高</td></tr>
+    <tr><td>5 / 20,360</td><td>Freeze-Omni 在该沉默窗口保住沉默的个数</td><td>Duplex-MPE</td><td>高</td></tr>
+    <tr><td>64.3pp vs 不显著</td><td>文本模型对名字线索敏感 vs 五个语音模型全部不显著（最小 p=0.2365）</td><td>Duplex-MPE</td><td>高</td></tr>
+    <tr><td>&lt;13%</td><td>ECHO：三系统 backchannel 场景正确保持话轮的比例（over-yielding）</td><td>ECHO</td><td>高</td></tr>
+    <tr><td>-50% / -40%</td><td>Seeduplex 误回复率+误打断率 / 抢话比例（相对半双工）</td><td>官方博客</td><td>高（相对值）</td></tr>
+    <tr><td>-250ms / -300ms</td><td>Seeduplex 判停延迟 / 打断响应延迟</td><td>官方博客</td><td>高（相对值）</td></tr>
+    <tr><td>+8% / +12%</td><td>Seeduplex 判停 MOS / 流畅度 MOS</td><td>官方博客</td><td>高（相对值）</td></tr>
+    <tr><td>+8.34%</td><td>Seeduplex A/B 通话满意度绝对值</td><td>官方博客</td><td>高</td></tr>
+    <tr><td>600ms / 800ms</td><td>MinMo 全双工理论 / 实践端到端延迟</td><td>MinMo 论文</td><td>高</td></tr>
+    <tr><td>1.2s</td><td>DuplexLedger side-talk 观测窗</td><td>DuplexLedger</td><td>高</td></tr>
+    <tr><td>100 样本</td><td>FDB v1.5 talking_other / bkg_speech 场景规模</td><td>FDB v1.5</td><td>高</td></tr>
+  </table>
+</section>
+
+<section id="s9">
+  <div class="folio">09 / Guidance</div>
+  <h2>对技术洞察报告的写作建议 <em>· 八条</em></h2>
+  <ol class="findings">
+    <li><strong>先给术语映射表，再引用任何数字</strong>——把 off-talk / side conversation / talking to others / side-talk rejection / 抗干扰 / 抢话 / 拒绝反应对齐到一张表。</li>
+    <li><strong>标注基准与版本</strong>——FDB v1.5 场景名在 v1（side conversation / ambient speech）与新版（talking to others / background speech）间有演化。</li>
+    <li><strong>不跨基准比数字</strong>——v1.5 与 Duplex-MPE 分母/量纲不同；指标选择已实证改变排名。</li>
+    <li><strong>分两条线叙述机制</strong>——"声学层拒绝（旁观者）"与"语义层选择参与（对话主体）"是两个问题域。</li>
+    <li><strong>产业数字全部注明口径</strong>——国内宣称均为相对自家上一代；"行业误打断率 X%"类说法一律不可引用。</li>
+    <li><strong>"会沉默≠听懂了不该接"</strong>——引用 silence preservation 时配 answer accuracy 一起读。</li>
+    <li><strong>把"评测缺口"作为洞察点</strong>——学术基准族 vs 产业黑箱/宣称、标准只覆盖唤醒态、第三方评测无专项的代差，是最有报告价值的发现之一。</li>
+    <li><strong>人类基线作前瞻锚</strong>——200ms vs 1-3s 差距 + Seeduplex 官方自承"与人人对话仍有不小差距"，可作"离自然交互还有多远"的收尾论据。</li>
+  </ol>
+</section>
+
+<section id="s10">
+  <div class="folio">10 / Sources</div>
+  <h2>来源清单 <em>· 正文 [S#] 对应</em></h2>
+  <h3><span class="n">A</span>一手学术来源</h3>
+  <ol class="src">
+    <li><span class="id">S1</span>Full-Duplex-Bench v1.5: Evaluating Overlap Handling for Full-Duplex Speech Models. arXiv 2507.23159 <span class="tag ok">已核实</span></li>
+    <li><span class="id">S2</span>Full-Duplex-Bench: … Turn-taking Capabilities. arXiv 2503.04721 <span class="tag ok">摘要核实</span></li>
+    <li><span class="id">S3</span>Duplex-MPE: Benchmarking Multi-Party Interaction in Full-Duplex Dialogue. arXiv 2609.31948 <span class="tag ok">已核实</span></li>
+    <li><span class="id">S4</span>ECHO: A Matched-Contrast Benchmark for Context-Sensitive Turn-Taking. arXiv 2609.17360 <span class="tag ok">已核实</span></li>
+    <li><span class="id">S5</span>DuplexLedger: Benchmarking Transactional Memory in Full-Duplex Speech Agents. arXiv 2610.27581 <span class="tag ok">已核实</span></li>
+    <li><span class="id">S6</span>FD-Bench（Peng et al.）. Interspeech 2025 / arXiv 2507.19040 <span class="tag">快照级</span></li>
+    <li><span class="id">S7</span>From Turn-Taking to Synchronous Dialogue: A Survey of Full-Duplex Spoken Language Models. arXiv 2509.14515 <span class="tag">框架核实·表行待核</span></li>
+    <li><span class="id">S8</span>MMW: Side Talk Rejection Multi-Microphone Whisper on Smart Glasses. arXiv 2507.05609 <span class="tag ok">摘要核实</span></li>
+    <li><span class="id">S9</span>WearVox: An Egocentric Multichannel Voice Assistant Benchmark for Wearables. arXiv 2601.02391 <span class="tag ok">转引核实</span></li>
+    <li><span class="id">S10</span>Oppermann et al. Off-Talk – A Problem for Human-Machine-Interaction. EUROSPEECH 2001 <span class="tag ok">交叉核实</span></li>
+    <li><span class="id">S11</span>Batliner et al. To Talk or not to Talk with a Computer: On-Talk vs. Off-Talk <span class="tag ok">多源一致</span></li>
+    <li><span class="id">S12</span>Apple ML Research: Adaptive Knowledge Distillation for DDSD · IEEE 10446421 <span class="tag ok">摘要核实</span></li>
+    <li><span class="id">S13</span>Implicit Acoustic Echo Cancellation for KWS and DDSD. Amazon Science <span class="tag ok">指标行核实</span></li>
+    <li><span class="id">S14</span>MinMo: A Multimodal Large Language Model for Seamless Voice Interaction. arXiv 2501.06282 <span class="tag ok">全文核实</span></li>
+    <li><span class="id">S15</span>Moshi. arXiv 2410.00037 <span class="tag ok">核实</span></li>
+    <li><span class="id">S16</span>SALMONN-omni. arXiv 2411.18138 / 2505.17060（NeurIPS 2025）<span class="tag ok">核实</span></li>
+    <li><span class="id">S17</span>OmniFlatten. arXiv 2410.17799（ACL 2025）<span class="tag ok">核实</span></li>
+    <li><span class="id">S18</span>Freeze-Omni. arXiv 2411.00774（ICML 2025）<span class="tag ok">核实</span></li>
+    <li><span class="id">S19</span>VITA-1.5. arXiv 2501.01957 <span class="tag ok">核实</span></li>
+    <li><span class="id">S20</span>neural FSM. arXiv 2405.19487（NeurIPS 2024）<span class="tag ok">核实</span></li>
+    <li><span class="id">S21</span>VAP. arXiv 2205.09812 · MuVAP. arXiv 2606.16731 <span class="tag ok">核实</span></li>
+    <li><span class="id">S22</span>DDSD 论文群：arXiv 2110.04656 / 2403.14438 / 2411.00023 / 2409.09284 <span class="tag ok">核实</span></li>
+    <li><span class="id">S23</span>Semantic VAD（帧级标点预测）. arXiv 2305.12450 <span class="tag ok">核实</span></li>
+    <li><span class="id">S24</span>"多数端到端语音 LLM 仍半双工". arXiv 2604.19221 <span class="tag ok">引文核实</span></li>
+    <li><span class="id">S25-27</span>DuplexDrama 2609.12872 · Harness 2609.28806 · Lychee-FD（ACL 2026, 2026.acl-long.419）<span class="tag">摘要级</span></li>
+  </ol>
+  <h3><span class="n">B</span>一手产业来源</h3>
+  <ol class="src">
+    <li><span class="id">S28</span>字节 Seed《Seed 全双工语音大模型发布：懂倾听、抗干扰》2026-04-09（seed.bytedance.com）<span class="tag ok">全文核实</span></li>
+    <li><span class="id">S29</span>字节 Seed《SeedRealtime 音视频全双工大模型发布》2026-08-05 <span class="tag ok">全文核实</span></li>
+    <li><span class="id">S30</span>火山引擎 豆包实时语音模型 3.0（Seeduplex）文档 <span class="tag ok">正文核实</span></li>
+    <li><span class="id">S31</span>Qwen 官方：Qwen3.5-Omni 语义打断发布说明 2026-03-30 <span class="tag">摘要级</span></li>
+    <li><span class="id">S32</span>阿里云百炼文档：打断方式 / 语义判停与拒识 <span class="tag ok">官方文档</span></li>
+    <li><span class="id">S33</span>百度小度"全双工免唤醒"（Baidu Create 2019）+ 拒绝反应 <span class="tag">官方+媒体</span></li>
+    <li><span class="id">S34</span>OpenAI Realtime API turn detection（server_vad / semantic_vad）<span class="tag">经转述核实</span></li>
+    <li><span class="id">S35</span>Vapi docs：Speech Configuration / Background Speech Denoising <span class="tag ok">官方文档</span></li>
+    <li><span class="id">S36</span>Retell AI docs：Handle Background Noise / 打断故障树 <span class="tag ok">官方文档</span></li>
+    <li><span class="id">S37</span>LiveKit turn detection blog/docs · Pipecat Smart Turn <span class="tag ok">官方</span></li>
+    <li><span class="id">S38</span>Hume EVI：end-of-turn detection <span class="tag ok">官方</span></li>
+    <li><span class="id">S39</span>ElevenLabs docs/blog · Google Duplex（概念辨析）<span class="tag ok">官方</span></li>
+    <li><span class="id">S41</span>TAF-WG7-AS0043-V1.0.0《智能产品语音识别测评方法 第二部分：智能音箱》<span class="tag ok">标准文本</span></li>
+    <li><span class="id">S42-48</span>理想 OTA 2.2 四音区（2021）· 小鹏双音区（2020）· 蔚来 NOMI（2024 官方）· 鸿蒙四音区 · 亿欧 2022 车载语音报告 <span class="tag">官方/二手</span></li>
+    <li><span class="id">S46-47</span>Rokid Glasses 2（2026-10）· 雷鸟 V3 · 讯飞 AIUI 白皮书/语音背包 <span class="tag">二手</span></li>
+    <li><span class="id">S49</span>SuperCLUE 实时语音基准（2024-12）· CAICT 专题列表（检索空结论）<span class="tag">未证实/空结论</span></li>
+    <li><span class="id">S50</span>CoDeTT. arXiv 2603.25434（Sidetalk 类目）<span class="tag">snippet 级</span></li>
+    <li><span class="id">S51</span>Sørensen et al. FTO（ISAAR 2019 / PMC 2021）<span class="tag ok">快照核实</span></li>
+    <li><span class="id">S53</span>FDB v2（2510.07838）· arXiv 2609.19596 · 2611.14774 <span class="tag">快照级</span></li>
+    <li><span class="id">S54</span>Roark AI / Evalgent：全双工语音 agent 测试失效面（2026-09）<span class="tag">二手</span></li>
+  </ol>
+</section>
+
+<section id="s11">
+  <div class="folio">11 / Method</div>
+  <h2>调研方法与信度分级</h2>
+  <p>6 个并行深度调研（学术定义溯源 / 学术模型机制 / 学术指标基准 / 国际产业 / 国内产业 / 场景与评测实践），合计 ≥78 次独立检索；主会话对 7 个最关键来源（FDB v1.5、FDB v1、Duplex-MPE、ECHO、DuplexLedger、Survey、Seeduplex 博客）直接打开原文逐字核查；对 6 个国内官方页面做全文正则术语检索。</p>
+  <table class="tight">
+    <tr><th style="width:16%">信度</th><th>判据</th></tr>
+    <tr><td>高</td><td>≥2 独立来源一致，或主会话直接抓取原文逐字引用</td></tr>
+    <tr><td>中</td><td>单一权威源 / 官方 snippet 未开全文</td></tr>
+    <tr><td>低</td><td>二手转述（媒体/社区）</td></tr>
+    <tr><td>未核实</td><td>明确降级、不写入结论（Meta Rani、Parakeet duplex、Voila turn-taking token、GLM-Realtime 全双工原文、小米超级小爱全双工、FDB v1 逐场景指标、CAICT 专项等）</td></tr>
+  </table>
+  <p><small>已知局限：① 部分页面因抓取服务故障降级为搜索摘要级证据（逐条标注）；② WearVox / HumDial / CoDeTT / FD-Bench 细节为转引或快照级；③ Jefferson 1972 / Goffman 1981 未逐字核对原文，按公认出处引用为"思想先祖"；④ 厂商宣称指标均为相对口径，无公开绝对值可比。</small></p>
+</section>
+
+<div class="colophon">
+  <div>全双工交互中的 Side Talk · 技术洞察报告 · 证据版</div>
+  <div class="mono">2026-11-16 · SIDETALK-INSIGHT / V1.0</div>
+</div>
+
+</main>
+</div>
+
+</body>
+</html>
