@@ -28,6 +28,7 @@ sideTalk（拒识 / 说话对象判定）评测集与选型工装。本仓库放
 | `docs/sideTalk定义指标与评测洞察-2026.pdf` | 同 deck 的 PDF 预览版 |
 | `docs/v2/sideTalk-技术洞察-2026Q4-10页.pptx` | 基于 v2 定稿的 **10 页技术洞察 deck**（华为浅色模板，四节：观点与定义 / 学术演进与基准 / 产业界 / 空白与落地） |
 | `docs/v2/sideTalk-技术洞察-2026Q4-10页.pdf` | 同 deck 的 PDF 预览版 |
+| `docs/v2/sideTalk-S1判定框架-一页-2026.pptx` | **S1 方法论一页**：判定流程（六问四出口）+ 边界判据 + 7 维×12 族用例矩阵 + 覆盖五条断言（配套文档见 duplex-voice `docs/S1场景判定与评测用例设计.md`） |
 
 ## 代码（`tools/`）
 
