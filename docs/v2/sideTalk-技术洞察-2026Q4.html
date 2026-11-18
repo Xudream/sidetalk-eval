@@ -214,7 +214,7 @@ table code{font-size:11.5px}
 <li><strong>"会打断"与"会分辨受话人"是两种能力，且现有架构无法联合优化。</strong> HumDial 榜单上冠军系统 Int 79.3 / Rej 72.2，Badcat Int 89.7 但 Rej 仅 57.8，<strong>所有系统 Rej 都显著低于 Int</strong><code>[已核]</code>；官方结论即"区分有效话轮与背景语音仍是首要瓶颈"。</li>
 </ol>
 <ol>
-<li><strong>产业界已规模化落地，但没有一家公布可比的绝对指标。</strong> 字节 Seeduplex 公开成绩全部是相对自家上一代（误回复/误打断减半、抢话 −40%、判停 −250ms、打断响应 −300ms、判停 MOS +8%、流畅度 MOS +12%、通话满意度 +8.34%）<code>[已核]</code>；京东 JoyAI-Talker 给出 0.17 / 0.01 的误触发数字，但<strong>分母未公开</strong><code>[未核]</code>；国际平台层（OpenAI / Google / AWS / LiveKit / Vapi / Retell）<strong>完全不公布</strong>误打断率数值。</li>
+<li><strong>产业界已规模化落地，但没有一家公布可比的绝对指标。</strong> 字节 Seeduplex 公开成绩全部是相对自家上一代（误回复/误打断减半、抢话 −40%、判停 −250ms、打断响应 −300ms、判停 MOS +8%、流畅度 MOS +12%、通话满意度 +8.34%）<code>[已核]</code>；京东 JoyAI-Talker 给出 0.17 / 0.01 的误触发数字，但<strong>分母未公开</strong><code>[未核]</code>；国际平台层（OpenAI / Google / AWS / LiveKit / Vapi / Retell）<strong>完全不公布</strong>误打断率数值。少数例外：蔚来 NOMI 公布绝对错误率（96.8%+ / 误识别·误拒识 ≤2%）但测试集构成未公开；SAS、Alexa、Gander 给出的是"口径特定"的绝对数。</li>
 </ol>
 <ol>
 <li><strong>机制上收敛为两条路线</strong>：声学层拒绝（多麦阵、波束、DDSD 检测器、音区锁定）与语义层选择参与（状态机、全双工预测器、语义判停/打断）。端到端原生全双工模型正把判定内化进主模型，但<strong>代价是首响延迟不可控</strong>（StepAudio 3 在第三方榜单实测 8.83s 首响<code>[二手]</code>），这也是"级联 + 调好的轮次检测"至今仍在榜单上占优的原因。</li>
@@ -647,7 +647,8 @@ table code{font-size:11.5px}
 <tr><td><strong>百度小度</strong>（2019-07）</td><td><strong>拒绝反应</strong>（国内最早的产品化表述）</td><td>全双工免唤醒，"与他人对话互不干扰"</td><td>仅功能声明</td><td><code>[二手]</code></td></tr>
 <tr><td><strong>理想</strong></td><td><strong>语义拒识</strong>（用户手册正式功能名）</td><td>原文："有效识别与 TA 的对话，不会打扰乘客间的聊天，避免误操作并保护用户隐私"；2021 年 2.2 OTA 曾叫"无效文本拒识"</td><td>无数值</td><td><code>[已核]</code></td></tr>
 <tr><td><strong>华为小艺</strong></td><td>唤醒声纹、小艺私语</td><td>"只回应你的声音"；私语需嘴距麦克风 ≤5cm（HarmonyOS 5.0+）</td><td>无数值；属<strong>入口级</strong>拒识，非对话内</td><td><code>[二手]</code></td></tr>
-<tr><td><strong>小鹏 / 蔚来 / 鸿蒙座舱</strong></td><td>双音区 / 四音区锁定</td><td>把"副驾/后排说话不算指令"升级为空间维度访问控制</td><td>全部功能声明</td><td><code>[二手]</code></td></tr>
+<tr><td><strong>蔚来 NOMI「多模拒识」</strong>（Tech Talk，2024-09-29）</td><td>多模拒识：视觉+文本+音频+压感判断对话指向，官方定义"哪些话是对 NOMI 说的，哪些是用户之间的闲聊（不要插嘴）"</td><td>自研 Wav2Vec+TinyBert 联合预训练 + 多视图对比学习；REJ Agent 三层逻辑（是否人话 / 与上下文关联 / 是否对 NOMI 说）；OMS 视觉+座椅传感+音区占用作多模感知特征</td><td>全领域对话判断准确率 <strong>96.8%+</strong>（12,000h 车载语音 + 2,000 万条文本）；<strong>误识别率与误拒识率均 ≤2%</strong>（模态内外多维度对比学习，Interspeech 2023 工程化；调度分发单轮 98%+）</td><td><code>[已核]</code>（nio.cn 官方逐字核对）</td></tr>
+<tr><td><strong>小鹏 / 华为小艺 / 鸿蒙座舱</strong></td><td>双音区 / 四音区锁定、声纹入口</td><td>把"副驾/后排说话不算指令"升级为空间维度访问控制</td><td>全部功能声明</td><td><code>[二手]</code></td></tr>
 <tr><td><strong>讯飞 AIUI</strong></td><td>语义拒识（平台能力）</td><td>受限域白名单 + 声纹/噪声过滤；眼镜方案用三麦区分佩戴者</td><td>无公开数值</td><td><code>[二手]</code></td></tr>
 <tr><td><strong>京东 JoyAI-Talker</strong>（2026-08-02）</td><td>全双工 + Joy-Duplex 门控</td><td>论文：打断响应率 <strong>0.88</strong>、背景语音误触发"极低"</td><td>官方页另称旁人误触发 <strong>0.17</strong>、附和误打断 <strong>0.01</strong>，但<strong>分母未公开</strong></td><td><code>[已核]</code>（0.88）/<code>[未核]</code>（0.17、0.01）</td></tr>
 <tr><td><strong>腾讯 Gander</strong>（混元开源）</td><td>抢话率</td><td>级联流水线对比</td><td>抢话误打断率 <strong>8.0% vs 33.0%</strong>；口径是"助手打断用户"，<strong>方向与拒识相反</strong></td><td><code>[二手]</code></td></tr>
@@ -1017,6 +1018,7 @@ L4 记忆    memory contamination     旁白被写入任务状态
 <tr><td>S62</td><td>Vapi / Retell / LiveKit / Pipecat / Hume / ElevenLabs / Deepgram 文档</td><td>二手</td></tr>
 <tr><td>S63</td><td>Artificial Analysis Full-Duplex Bench / tokenstrom 评测博客</td><td>二手</td></tr>
 <tr><td>S64</td><td>小鹏/蔚来/鸿蒙/Rokid/雷鸟/讯飞 AIUI 产品资料</td><td>二手</td></tr>
+<tr><td>S65</td><td>蔚来官方 Tech Talk「NOMI GPT 如何精准对话」（nio.cn，2024-09-29）+ NOMI GPT 上线通稿（2024-04-12）</td><td>已核</td></tr>
 </tbody></table>
 <hr>
 </section>
@@ -1046,6 +1048,7 @@ L4 记忆    memory contamination     旁白被写入任务状态
 <tr><td>18</td><td>CoDeTT SMR 区间</td><td>"Gemini 15–25%"</td><td><strong>删除区间</strong>，仅保留已核的 <strong>MiniCPM &gt;40%</strong></td><td>正文</td></tr>
 <tr><td>19</td><td>Talking Turns / Instruct-FD</td><td>引用具体数字</td><td><strong>暂不引用</strong>：无可核 arXiv 编号</td><td>本轮无法溯源</td></tr>
 <tr><td>20</td><td>人类基线</td><td>"151ms（TurnBench）"</td><td><strong>采用 200ms</strong>（FDB 引 Levinson）；151ms 未核</td><td>FDB v1.5</td></tr>
+<tr><td>21</td><td>"蔚来 = 音区锁定 / 入口级拒识"</td><td><strong>低估并已纠正</strong>。蔚来自 2024 年起有专用「多模拒识」模型（Wav2Vec+TinyBert 联合预训练、REJ Agent 三层 LLM 逻辑、多模感知特征），公布全领域对话判断准确率 96.8%+、误识别/误拒识 ≤2%——国内少数公布绝对错误率的厂商。官方术语是"多模拒识"而非"语义拒识"，功能实质即语义级对话指向判定</td><td>nio.cn 官方 Tech Talk 逐字核对（S65）</td></tr>
 </tbody></table>
 <p><strong>另有 3 处并非错误、但需说明口径的</strong>：</p>
 <ul>
