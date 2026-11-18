@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S1 语义拒识：设计与评测规范 · 2026 Q4</title>
+<style>
+:root{
+  --bg:#faf9f7; --ink:#141311; --ink-2:#5f5a52; --ink-3:#8f887d;
+  --hair:#e5e1da; --hair-2:#d6d1c8;
+  --accent:#a3451f; --accent-soft:rgba(163,69,31,.08);
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.75;font-weight:400;-webkit-font-smoothing:antialiased}
+a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--hair-2)}
+a:hover{border-bottom-color:var(--accent);color:var(--accent)}
+/* ---------- cover ---------- */
+.cover{max-width:1180px;margin:0 auto;padding:96px 48px 64px}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase}
+.kicker b{color:var(--accent);font-weight:500}
+h1{font-size:56px;line-height:1.08;font-weight:250;letter-spacing:-.02em;margin:28px 0 10px;max-width:20ch}
+h1 strong{font-weight:600;color:var(--accent);letter-spacing:0}
+.sub{font-size:20px;font-weight:300;color:var(--ink-2);margin-bottom:44px;letter-spacing:.01em}
+.meta{display:flex;gap:40px;flex-wrap:wrap;border-top:1px solid var(--hair);padding-top:22px;max-width:760px}
+.meta div{font-size:12.5px;color:var(--ink-2)}
+.meta span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase;margin-bottom:4px}
+/* ---------- layout ---------- */
+.shell{max-width:1180px;margin:0 auto;padding:0 48px 96px;display:grid;grid-template-columns:216px 1fr;gap:72px;align-items:start}
+nav.toc{position:sticky;top:40px;padding-top:8px}
+nav.toc .t{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;margin-bottom:16px}
+nav.toc a{display:block;font-size:12.5px;color:var(--ink-2);padding:5px 0;border-bottom:none;font-weight:400}
+nav.toc a:hover{color:var(--accent)}
+nav.toc a b{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--ink-3);margin-right:10px}
+main{min-width:0;max-width:840px}
+/* ---------- sections ---------- */
+section{padding:72px 0 8px;border-top:1px solid var(--hair);margin-bottom:56px}
+section:first-of-type{border-top:none}
+.folio{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink-3)}
+h2{font-size:27px;font-weight:600;letter-spacing:-.01em;margin:10px 0 8px;line-height:1.25}
+h2 em{font-style:normal;font-weight:300;color:var(--ink-2)}
+.lede{font-size:16px;font-weight:300;color:var(--ink-2);max-width:62ch;margin-bottom:8px}
+h3{font-size:16.5px;font-weight:600;margin:40px 0 12px;letter-spacing:.01em}
+h3 .n{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--accent);margin-right:12px}
+p{max-width:66ch;margin:14px 0;color:var(--ink)}
+p.wide{max-width:none}
+.muted{color:var(--ink-3)}
+small{font-size:12.5px;color:var(--ink-3)}
+code{font-family:var(--mono);font-size:12.5px;background:var(--accent-soft);padding:1px 5px;border-radius:2px}
+hr{border:none;border-top:1px solid var(--hair);margin:32px 0;max-width:280px;margin-left:0}
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13.5px;line-height:1.6}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500;text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--hair-2)}
+td{padding:12px 14px 12px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+td:first-child{color:var(--ink);font-weight:500}
+tr:last-child td{border-bottom:1px solid var(--hair-2)}
+table.tight td{padding:9px 12px 9px 0;font-size:13px}
+td .en{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.q{font-style:normal;color:var(--ink-2)}
+.accent-cell{color:var(--accent);font-weight:500}
+/* ---------- numbered findings ---------- */
+ol.findings{list-style:none;counter-reset:f;margin:24px 0}
+ol.findings li{counter-increment:f;position:relative;padding:18px 0 18px 58px;border-bottom:1px solid var(--hair);max-width:none}
+ol.findings li::before{content:counter(f,decimal-leading-zero);position:absolute;left:0;top:20px;font-family:var(--mono);font-size:13px;color:var(--accent)}
+ol.findings li strong{font-weight:600}
+/* ---------- definition blocks ---------- */
+.def{border-left:1px solid var(--hair-2);padding:6px 0 6px 26px;margin:22px 0;max-width:66ch}
+.def .t{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:8px}
+.def p{margin:8px 0}
+/* ---------- svg ---------- */
+figure{margin:32px 0}
+figcaption{font-size:12.5px;color:var(--ink-3);margin-top:12px;max-width:62ch}
+figure svg{width:100%;height:auto;display:block}
+/* ---------- metrics strip ---------- */
+.metrics{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2);margin:28px 0}
+.metric{flex:1 1 150px;padding:20px 24px 20px 0}
+.metric .v{font-size:30px;font-weight:250;letter-spacing:-.02em}
+.metric .v b{font-weight:600;color:var(--accent)}
+.metric .l{font-size:12px;color:var(--ink-3);margin-top:4px;line-height:1.5}
+/* ---------- timeline ---------- */
+.timeline{margin:26px 0;border-left:1px solid var(--hair-2)}
+.tl-item{position:relative;padding:14px 0 14px 30px}
+.tl-item::before{content:"";position:absolute;left:-3px;top:22px;width:5px;height:5px;background:var(--accent);border-radius:50%}
+.tl-item .y{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.06em}
+.tl-item .what{font-size:14px;margin-top:2px}
+.tl-item .note{font-size:12.5px;color:var(--ink-3)}
+/* ---------- compare ---------- */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2);margin:26px 0}
+.compare>div{padding:22px 26px 22px 0}
+.compare>div+div{border-left:1px solid var(--hair);padding-left:26px}
+.compare .h{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.compare ul{list-style:none}
+.compare li{padding:7px 0;border-bottom:1px solid var(--hair);font-size:13.5px}
+.compare li:last-child{border-bottom:none}
+/* ---------- sources ---------- */
+ol.src{list-style:none;font-size:13px;color:var(--ink-2);columns:1;margin:20px 0}
+ol.src li{padding:9px 0;border-bottom:1px solid var(--hair)}
+ol.src .id{font-family:var(--mono);color:var(--accent);font-size:12px;margin-right:10px}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:2px 7px;border:1px solid var(--hair-2);color:var(--ink-3);white-space:nowrap}
+.tag.ok{color:var(--accent);border-color:var(--accent)}
+/* ---------- colophon ---------- */
+.colophon{border-top:1px solid var(--hair);margin-top:72px;padding-top:28px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;color:var(--ink-3);font-size:12px}
+.colophon .mono{font-family:var(--mono);letter-spacing:.08em}
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr;gap:24px;padding:0 24px 64px}
+  nav.toc{position:static;border-top:1px solid var(--hair);padding-top:16px}
+  nav.toc a{display:inline-block;margin-right:14px}
+  .cover{padding:64px 24px 40px}
+  h1{font-size:38px}
+  .compare{grid-template-columns:1fr}
+  .compare>div+div{border-left:none;border-top:1px solid var(--hair);padding-left:0}
+}
+@media print{nav.toc{display:none}.shell{display:block}}
+
+pre{background:#f3f0ea;border:1px solid var(--hair);border-radius:3px;padding:18px 20px;overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--ink-2);margin:22px 0}
+pre.ascii{white-space:pre;font-size:11px}
+blockquote{border-left:2px solid var(--accent);background:var(--accent-soft);padding:14px 20px;margin:20px 0;color:var(--ink-2)}
+blockquote p{margin:0}
+hr{border:none;border-top:1px solid var(--hair);margin:34px 0}
+h4{font-size:14px;font-weight:600;margin:26px 0 8px;letter-spacing:.01em}
+ul,ol{margin:14px 0 14px 22px}
+ul li,ol li{padding:4px 0;font-size:14.5px;line-height:1.72}
+p{margin:12px 0}
+table code{font-size:11.5px}
+.toc a{display:block;padding:5px 0;font-size:12.5px;color:var(--ink-2);border-bottom:none}
+.toc a:hover{color:var(--accent)}
+.tag{font-family:var(--mono);font-size:10.5px;color:var(--accent);background:var(--accent-soft);padding:1px 5px;border-radius:2px}
+</style>
+</head>
+<body>
+<header class="cover">
+  <div class="kicker">技术规范 · 全双工语音 · <b>S1 语义拒识专项 · 独立文档</b></div>
+  <h1>S1 <strong>语义拒识</strong><br>设计与评测规范</h1>
+  <p class="sub">音频直入主链路 · 条件双头流式决策 · 七类子场景 · 最小对评测集 · 五项齐报与三条流式增量</p>
+  <div class="meta">
+    <div><span>日期</span>2026-11-18</div>
+    <div><span>约束</span>音频直入 · 与语义 VAD 并发 · 每次流式判断 ≤300ms · 云侧 ≤7B</div>
+    <div><span>覆盖</span>7 类 S1 子场景 / 8 组文本最小对 / 8 组音频最小对 / 12 项指标</div>
+    <div><span>信度</span>四级标记 + [设计] 标注；事实以上位 v2 定稿为准</div>
+  </div>
+</header>
+<div class="shell">
+<nav class="toc">
+  <div class="t">目录</div>
+  <a href="#s1">阅读指南</a>
+  <a href="#s2">问题定义</a>
+  <a href="#s3">总体架构</a>
+  <a href="#s4">场景谱系</a>
+  <a href="#s5">评测规范</a>
+  <a href="#s6">落地检查清单（go / no-go）</a>
+  <a href="#s7">引用与来源</a>
+  <a href="#s8">附录 A：评测用例样例集</a>
+  <a href="#s9">附录 B：术语表</a>
+  <a href="#s10">附录 C：与既有 S1 文档的差异对照（输入假设冲突</a>
+  <a href="#s11">附录 D：未决事项</a>
+</nav>
+<main>
+<blockquote><p>版本 v1.0 · 2026-11-18 · 独立文档 · 云侧全双工 sideTalk 专项</p><p>上位文档：<code>sideTalk-技术洞察-2026Q4.md</code>（v2 定稿，事实与指标口径以其为准）</p><p>同主题文档：<code>S1语义拒识设计与用例覆盖.md</code>（文本证据路线，输入假设不同，见 §0.4 与附录 C）</p></blockquote>
+<p><strong>本篇只解决一件事</strong>：在「说话人是主用户」已经确定之后，<strong>怎么从语义上判断这句话是不是说给设备的</strong>，以及<strong>怎么测出这一步到底有没有用</strong>。</p>
+<hr>
+<section id="s1">
+  <div class="folio">01</div>
+  <h2>0. 阅读指南</h2>
+<h3>0.1 本文解决什么、不解决什么</h3>
+<table>
+<thead><tr><th>解决</th><th>不解决</th></tr></thead><tbody>
+<tr><td>S1（主用户转头对旁人说话）的语义判定架构</td><td>声纹/目标说话人锁定（<strong>独立模块</strong>，见 §1.4）</td></tr>
+<tr><td>流式决策、动作分级、与语义 VAD 的并发分工</td><td>音区/DoA/波束等空间访问控制（独立模块）</td></tr>
+<tr><td>S1 子场景谱系与评测集构造</td><td>S2/S3/S4 的专项设计（仅给边界，见 §1.4）</td></tr>
+<tr><td>指标定义、标注规范、防刷分</td><td>端侧部署（本文<strong>只考虑云侧</strong>）</td></tr>
+<tr><td>与已有文本证据路线的资产复用与差异说明</td><td>模型结构的具体层数/参数搜索</td></tr>
+</tbody></table>
+<h3>0.2 硬约束清单（来自项目约定，全文不得违反）</h3>
+<table>
+<thead><tr><th>#</th><th>约束</th><th>落地含义</th></tr></thead><tbody>
+<tr><td>C1</td><td><strong>sideTalk 不等 ASR</strong></td><td>主路径是音频 token 直入，类似 omni 模型；<strong>不等待最终 ASR 结果</strong></td></tr>
+<tr><td>C2</td><td><strong>音频直入</strong></td><td>输入是流式音频，不是转写文本；partial ASR 至多作可选辅助条件</td></tr>
+<tr><td>C3</td><td><strong>与语义 VAD 并发</strong></td><td>两者共用一条流式时间轴，不串行、不互相等待</td></tr>
+<tr><td>C4</td><td><strong>300ms 是每次流式判断的时延</strong></td><td>不是「从开口到最终判决」的总时延；每个 chunk 都要在预算内给出决策</td></tr>
+<tr><td>C5</td><td><strong>sideTalk ≤7B，语义 VAD ≤1B</strong></td><td>双模型分离；本文只写 sideTalk 侧</td></tr>
+<tr><td>C6</td><td><strong>声纹目标说话人锁定是单独模块</strong></td><td>不得把「是不是机主」混进语义拒识的判据</td></tr>
+<tr><td>C7</td><td><strong>主要解决 S1，次要解决 S2–S4</strong></td><td>评测集以 S1 为主体，S2–S4 只做边界回归</td></tr>
+<tr><td>C8</td><td><strong>只考虑云侧</strong></td><td>不做端侧量化/裁剪假设</td></tr>
+<tr><td>C9</td><td><strong>原有文档不动</strong></td><td>本文为新增独立文档，不修改 v2 定稿及同主题文档</td></tr>
+</tbody></table>
+<h3>0.3 信度标记（沿用 v2 定稿，新增一类）</h3>
+<table>
+<thead><tr><th>标记</th><th>含义</th></tr></thead><tbody>
+<tr><td><code>[已核]</code></td><td>已打开原文/官方页面逐字核对，或已在 v2 定稿中核过</td></tr>
+<tr><td><code>[摘要]</code></td><td>仅核对到论文摘要/元数据</td></tr>
+<tr><td><code>[二手]</code></td><td>第三方转述，未见一手来源</td></tr>
+<tr><td><code>[未核]</code></td><td>来源存疑或口径不明，<strong>不得作为结论引用</strong></td></tr>
+<tr><td><code>[设计]</code></td><td><strong>本方案的建议值/架构选择，不是外部事实</strong>——目标值、阈值、组量、预算默认带此标记</td></tr>
+</tbody></table>
+<p>凡出现数字，先问它是「外部事实」还是「我们要达到的目标」。本文所有目标值均为 <code>[设计]</code>，可直接按实测重标定。</p>
+<h3>0.4 与仓库内其它文档的关系（重要）</h3>
+<table>
+<thead><tr><th>文档</th><th>路线</th><th>输入</th><th>输出</th><th>与本文关系</th></tr></thead><tbody>
+<tr><td><code>sideTalk-技术洞察-2026Q4.md</code></td><td>技术洞察定稿</td><td>文献/产业资料</td><td>定义、指标、评测全景</td><td><strong>事实与指标口径的唯一上位来源</strong></td></tr>
+<tr><td><code>S1语义拒识设计与用例覆盖.md</code></td><td>文本证据路线</td><td><strong>partial ASR 文本</strong> + 会话上下文 + 系统状态（其 §3.1 明确写「≤300 ms 内首个可用片段」）</td><td><code>P(addressed)</code> + 证据列表 + 三档（规则/小模型/LLM）</td><td><strong>资产来源</strong>：其 E1–E8 八类证据、SEM1–SEM12 子场景、MP1–MP8 最小对、标注 JSON、消融四组、泄漏自检，本文全部复用（§2.3、§3.2、§4.7）</td></tr>
+<tr><td>本文</td><td><strong>音频直入路线</strong></td><td><strong>流式音频 chunk</strong> + 对话状态缓存</td><td>addressee / actionability 双头 posterior + 分级动作</td><td>独立成篇，<strong>输入假设与上一行不同</strong></td></tr>
+</tbody></table>
+<blockquote><p><strong>必须讲清的一点</strong>：上面那份同主题文档以文本为主输入，与 C1/C2 冲突。它不是错的——作为「语义证据层」的可操作化清单，它非常扎实；但它不能作为本项目的主链路。附录 C 给出逐项差异对照。<strong>两条路线的阈值、指标绝对值、评测集不可混用</strong>。</p></blockquote>
+<h3>0.5 分层坐标系（避免命名冲突）</h3>
+<p>v2 定稿 §1.4 已定义<strong>问题分层 L1–L4</strong>：L1 声学层 / L2 对象层 / L3 动作层 / L4 记忆·隐私层。本文沿用这套编号表示「问题层级」，<strong>另用 A/B/C 表示语义信号层级</strong>，两者不是同一坐标系：</p>
+<table>
+<thead><tr><th>本文编号</th><th>名称</th><th>对应 v2 层级</th><th>内容</th></tr></thead><tbody>
+<tr><td>信号 A</td><td>词汇-句法层</td><td>L2 的浅层证据</td><td>呼语、谓词类型、意图槽位、能力域</td></tr>
+<tr><td>信号 B</td><td>语用-连贯层</td><td>L2 的深层证据</td><td>话题断裂、共同基础、可回答性</td></tr>
+<tr><td>信号 C</td><td>状态-历史层</td><td>L2 + L4</td><td>寻址轨迹、任务 frame、系统状态</td></tr>
+<tr><td>head A</td><td>addressee</td><td><strong>L2 对象层</strong></td><td>这句话指向谁</td></tr>
+<tr><td>head B</td><td>actionability</td><td><strong>L3 动作层</strong></td><td>是否存在设备可执行动作</td></tr>
+<tr><td>动作分级</td><td>可逆 / 不可逆</td><td>L3 + L4</td><td>代价与隐私</td></tr>
+</tbody></table>
+<hr>
+</section>
+<section id="s2">
+  <div class="folio">02</div>
+  <h2>1. 问题定义</h2>
+<h3>1.1 S1 在 S0–S4 中的位置</h3>
+<p>沿用项目场景表（v2 定稿 §1 与之对齐）：</p>
+<table>
+<thead><tr><th>编号</th><th>场景</th><th>说话人</th><th>交流对象</th><th>系统动作</th></tr></thead><tbody>
+<tr><td>S0</td><td>真实指令</td><td>主用户</td><td>设备</td><td>响应</td></tr>
+<tr><td><strong>S1</strong></td><td><strong>主用户转向他人</strong></td><td><strong>主用户</strong></td><td><strong>旁人</strong></td><td><strong>静默（本篇）</strong></td></tr>
+<tr><td>S2</td><td>旁人对主用户</td><td>旁人</td><td>主用户</td><td>静默</td></tr>
+<tr><td>S3</td><td>旁人之间</td><td>旁人</td><td>旁人</td><td>静默</td></tr>
+<tr><td>S4</td><td>媒体/电子人声</td><td>电子源</td><td>—</td><td>静默</td></tr>
+</tbody></table>
+<p>S1 在学术侧的对应名是 <strong>SDO（Speech Directed at Others）</strong>，FDB v1.5 里叫 <em>talking to others</em>，2001 年 EUROSPEECH 叫 <em>Off-Talk</em>。v2 定稿 §1.3 已核过这些术语的判定层级差异 <code>[已核]</code>。</p>
+<h3>1.2 S1 为什么最难：四类信号同时失效</h3>
+<table>
+<thead><tr><th>信号</th><th>在 S2/S3 是否有效</th><th>在 S1</th><th>原因</th></tr></thead><tbody>
+<tr><td>声纹 / 说话人身份</td><td>✅ 主判据</td><td>❌</td><td>说话人还是同一个主用户</td></tr>
+<tr><td>音区 / 距离 / DoA</td><td>✅ 有效</td><td>❌</td><td>同一位置、同一通道；侧头只是弱线索且不等于受话对象</td></tr>
+<tr><td>能量 / 音量 / 信噪比</td><td>✅ 有效</td><td>❌</td><td>无系统性差异</td></tr>
+<tr><td><strong>文本关键词 / 意图槽位</strong></td><td>⚠️ 部分</td><td>❌</td><td>「把空调关了」对副驾说时，文本与 S0 完全同形</td></tr>
+<tr><td><strong>语用连贯性 / 对话状态</strong></td><td>—</td><td>✅</td><td><strong>唯一可用判据</strong></td></tr>
+</tbody></table>
+<blockquote><p><strong>数据侧的佐证</strong>：HumDial 拒识训练集里 TPS 有 <strong>1,210 条</strong>，<strong>SDO 为 0 条</strong>，测试集 SDO 仅 <strong>200 条</strong> <code>[已核]</code>（v2 定稿 §2.2.2）。这不是疏忽而是构造难度——SDO 与真实指令在声纹、音区、文本上全部同形，只能靠语用线索分辨。<strong>公开集无法直接拿来测 S1，必须自建。</strong></p></blockquote>
+<p>另一条反直觉证据：FDB v1.5 里 Gemini 在「对旁人说」场景 99% 保持话轮（Resume 0.99），但在「背景语音」场景却有 <strong>70% 误响应</strong>（Respond 0.70）<code>[已核]</code>。同一能力换个场景就崩——所以本文坚持<strong>分场景、分迷惑度报数</strong>，不接受单一「sideTalk 准确率」。</p>
+<h3>1.3 工作定义</h3>
+<blockquote><p><strong>S1 语义拒识</strong> = 在流式音频上，判定「当前话语与正在进行的设备对话框架是否发生断裂」，并据此选择不发起响应 / 继续听 / 仅作上下文保留的动作。</p></blockquote>
+<p>关键词是<strong>断裂</strong>，不是「非指令」。这个措辞决定了三件事：</p>
+<ol>
+<li>模型必须是<strong>条件模型</strong> <code>p(addressee | 音频, 对话状态)</code>，不是无条件的句子分类器；</li>
+<li>判据的主体是 B 层（语用连贯），A 层（词汇）只是辅助；</li>
+<li>判定是<strong>可撤销</strong>的：断裂可能在句中才显现，也可能被后续证据否定。</li>
+</ol>
+<h3>1.4 与相邻概念的边界</h3>
+<table>
+<thead><tr><th>概念</th><th>归属</th><th>与 S1 的边界</th></tr></thead><tbody>
+<tr><td>语义 VAD / backchannel</td><td>独立模块（≤1B）</td><td>管<strong>时机</strong>（话轮结束、附和点、停顿）；本文管<strong>对象</strong>。两者并发，见 §2.7</td></tr>
+<tr><td>声纹目标说话人锁定</td><td>独立模块（C6）</td><td>管「是不是机主」；S1 里机主身份恒为真，该模块对 S1 无判别力</td></tr>
+<tr><td>音区 / DoA</td><td>独立模块</td><td>管「从哪来」；朝向偏离 ≠ 受话对象是旁人，只作弱先验</td></tr>
+<tr><td>self-talk（自语）</td><td>单列</td><td>无指定受话人（Duplex-MPE 的 N3）；<strong>不并入 S0–S4 产品模块</strong>，也不进 S1 分母（v2 定稿 §1.3）</td></tr>
+<tr><td>唤醒词</td><td>硬规则</td><td>唤醒词命中即 S0，<strong>语义层不得否决</strong>（与已有文档 §5 一致）</td></tr>
+<tr><td>S2 / S3</td><td>声纹+音区主判据</td><td>本文只做「语义侧边界回归」，不为其设计主链路</td></tr>
+<tr><td>S4 媒体人声</td><td>独立检测器</td><td>含指令式台词，作为对抗反例集（不进 S1 分母）</td></tr>
+<tr><td>DDSD / SDO</td><td>学术任务名</td><td>DDSD 是二分类（是否对设备说）；SDO 是交互行为级，本文的 S1 对齐 SDO</td></tr>
+</tbody></table>
+<h3>1.5 摘要：十条结论</h3>
+<ol>
+<li><strong>S1 的本质是检测「与当前设备对话框架的断裂」，不是检测「这句话不是指令」。</strong> <code>[设计]</code></li>
+<li><strong>声纹、音区、能量、文本关键词在 S1 同时失效</strong>，只有带对话状态的语用语义可用 <code>[已核]</code>。</li>
+<li>模型必须<strong>条件化</strong>：主路径音频直入 + 对话状态缓存（state tokens / KV 复用），而不是退回 ASR 文本 <code>[设计]</code>。</li>
+<li><strong>双头齐报</strong>：addressee（L2）与 actionability（L3）两维，单阈值/单分类必被「像指令却说给旁人」击穿 <code>[设计]</code>。</li>
+<li><strong>流式可撤销</strong>：逐 chunk posterior + 累积证据 + 迟滞 + 水印点 + EOT flush；证据翻转要能撤销已准备的响应 <code>[设计]</code>。</li>
+<li><strong>动作分级</strong>把「误执行 = 0」从口号变成架构约束：低置信只走可逆动作，不可逆动作必须 EOT + 双头高置信 <code>[设计]</code>。</li>
+<li><strong>与语义 VAD 严格并发分工、水印融合</strong>，不串行（C3）<code>[设计]</code>。</li>
+<li><strong>最易漏的失败模式是拒识惯性</strong>：拒掉 S1 后用户回到设备，系统仍静默 → FRR 飙升；必须显式做重新寻址检测并计入 FRR <code>[设计]</code>。</li>
+<li><strong>评测集主体必须放在「高迷惑 + 最小对」</strong>，否则模型靠关键词就能刷到 95%+；同形样本占比须公开 <code>[设计]</code>（与已有文档 §6.2「≥30%」一致）。</li>
+<li>指标沿用 v2 §7.1 <strong>五项齐报</strong>，另加三条流式增量（最小对一致率 / 撤销正确率 / 恢复率）<code>[设计]</code>。</li>
+</ol>
+<hr>
+</section>
+<section id="s3">
+  <div class="folio">03</div>
+  <h2>2. 总体架构</h2>
+<h3>2.1 架构总图</h3>
+<pre class="ascii">                    ┌──────────────── 同一流式时间轴（并发，不串行）────────────────┐
+                    │                                                              │
+  流式音频 chunk ───┼──▶ [sideTalk ≤7B] 音频编码器 ──▶ 信号 A/B/C ──▶ 双头 posterior │
+  (20–40ms 帧)      │         ▲                                        │            │
+                    │         │ 对话状态缓存（state tokens / KV 复用）  │            │
+                    │         │  · 上一轮 / 未完成任务 frame            │            │
+                    │         │  · 寻址轨迹 / 系统 idle·speaking        │            │
+                    │         └────────────────────────────────────────┘            │
+                    │                                                              │
+                    │   累积证据 + 迟滞 ─▶ 水印点预判 ─▶ EOT flush ─▶ 可撤销         │
+                    │                                                              │
+  流式音频 chunk ───┼──▶ [语义 VAD ≤1B] 话轮/附和/停顿  ─────────────┐             │
+                    │                                                  ▼             │
+                    │                                   融合 gate（水印对齐）        │
+                    └──────────────────────────────────────┬───────────────────────┘
+                                                           ▼
+                          可逆动作（低置信默认）      执行动作（受限）
+                          静默 / 继续听 / 附和        需 EOT + 双头高置信
+                                                      不可逆动作误执行 = 0</pre>
+<h3>2.2 输入：音频主路径 + 对话状态缓存</h3>
+<h4>2.2.1 为什么「不等最终 ASR」与「深层语用」不矛盾</h4>
+<p>这是本方案最容易被质疑的一点，需要讲透：</p>
+<ul>
+<li><strong>约束 C1/C2 说的是「不等 ASR 结果」，不是「不用语义」</strong>。语义可以来自两个地方：① 音频编码器自身的隐状态（omni 模型把声学+语言信息一起编码）；② 一个<strong>持续更新的对话状态缓存</strong>。</li>
+<li>真正需要「内容」的是 B 层（话题断裂、共同基础），而它依赖的<strong>主要是上一轮上下文</strong>，不是当前这句话的完整转写。上一轮的上下文在到达当前 chunk 之前<strong>早就可用</strong>，可以预先编码成 state tokens 常驻 KV cache。</li>
+<li>当前这句话的语义，由音频编码器以增量方式逐 chunk 给出隐状态表示，双头只需在这个表示上做轻量分类/打分——<strong>不需要生成文本，也不需要等 EOT</strong>。</li>
+<li>因此：主链路全程无 ASR 依赖；若系统里本来就有流式 partial hypothesis，可把它作为<strong>可选辅助条件</strong>（late fusion 的一个特征），但<strong>绝不允许成为阻塞依赖</strong>，且必须在消融里单独验证「去掉它性能掉多少」。</li>
+</ul>
+<blockquote><p>与之对照，已有文档 §3.1 把 <code>partial ASR 文本（≤300ms 内首个可用片段）</code> 作为整个链路的入口。这在级联架构里成立，但在 C1/C2 下不成立。附录 C 给出逐项对照。</p></blockquote>
+<h4>2.2.2 对话状态缓存的字段</h4>
+<table>
+<thead><tr><th>字段</th><th>内容</th><th>更新时机</th></tr></thead><tbody>
+<tr><td><code>task_frame</code></td><td>当前未完成任务及其待填槽位（如 <code>nav_active / destination=?</code>）</td><td>每轮 EOT</td></tr>
+<tr><td><code>last_addressee</code></td><td>上一轮受话人判定（device / person / self / broadcast）</td><td>每轮 EOT</td></tr>
+<tr><td><code>sys_state</code></td><td>idle / speaking / just_stopped / recovering</td><td>事件驱动</td></tr>
+<tr><td><code>topic_embedding</code></td><td>最近 N 轮话题的稠密表示（用于检测断裂）</td><td>每轮 EOT</td></tr>
+<tr><td><code>silence_run_ms</code></td><td>已连续静默时长（用于拒识惯性判定）</td><td>逐 chunk</td></tr>
+<tr><td><code>wake_hit</code></td><td>本轮是否命中唤醒词（硬规则置位）</td><td>逐 chunk</td></tr>
+</tbody></table>
+<p><strong>工程纪律</strong>：状态必须 KV 复用、增量更新，<strong>每个 chunk 不得全窗重算</strong>，否则计算量随窗口长度线性增长，300ms SLO 无法维持（v2 定稿 §4 已核算过全窗重算与缓存复用的代价差异）。</p>
+<h4>2.2.3 两条输入路线的取舍</h4>
+<table>
+<thead><tr><th>维度</th><th>音频直入（本文，主路线）</th><th>partial ASR 文本（已有文档，辅助/对照）</th></tr></thead><tbody>
+<tr><td>满足 C1/C2</td><td>✅</td><td>❌</td></tr>
+<tr><td>韵律/副语言线索</td><td>✅ 天然保留</td><td>❌ 丢失</td></tr>
+<tr><td>深层语用推理</td><td>⚠️ 依赖状态缓存</td><td>✅ 文本上更容易</td></tr>
+<tr><td>首 chunk 可用时延</td><td>极低</td><td>需等首个可用片段</td></tr>
+<tr><td>ASR 错字鲁棒性</td><td>✅ 不受影响</td><td>❌ 需模糊匹配/音近词典</td></tr>
+<tr><td>可解释/可审计</td><td>⚠️ 需额外证据头</td><td>✅ 证据列表天然可读</td></tr>
+<tr><td>建议角色</td><td><strong>主链路</strong></td><td>可选辅助条件 / 离线错误分析 / 标注辅助</td></tr>
+</tbody></table>
+<h3>2.3 语义信号三层（A / B / C）</h3>
+<table>
+<thead><tr><th>层</th><th>内容</th><th>典型线索</th><th>强度</th><th>能否单独定案</th></tr></thead><tbody>
+<tr><td><strong>A 词汇-句法</strong></td><td>呼语、谓词类型、意图槽位、能力域</td><td>人名/亲属称谓、人—人谓词（递/拿/收）、设备谓词（导航/音量）、转述标记（他说/它说）</td><td>中</td><td>❌</td></tr>
+<tr><td><strong>B 语用-连贯</strong></td><td>话题断裂、共同基础、可回答性、言语行为</td><td>是否承接系统上一句、是否只有旁人知道的信息、是否在对设备「可操作」</td><td><strong>强（S1 主判据）</strong></td><td>⚠️ 高置信可</td></tr>
+<tr><td><strong>C 状态-历史</strong></td><td>寻址轨迹、任务 frame、系统状态</td><td>待填槽位、上一轮受话人、已静默时长</td><td>弱先验</td><td>❌</td></tr>
+</tbody></table>
+<h4>2.3.1 复用已有文档的 E1–E8 证据体系</h4>
+<p><code>S1语义拒识设计与用例覆盖.md</code> §2 给出的八类证据，可直接作为 <strong>A/B 层的可操作化特征清单</strong>（在音频直入路线里由证据头预测，或从 partial hypothesis 上抽取）：</p>
+<table>
+<thead><tr><th>证据</th><th>内容</th><th>归入</th><th>强度</th></tr></thead><tbody>
+<tr><td>E1 称呼/第二人称指称</td><td>人名、亲属称谓（非唤醒词）</td><td>A</td><td>强</td></tr>
+<tr><td>E2 人—人动作谓词</td><td>递/拿/收/抱/喂/哄</td><td>A</td><td>中—强</td></tr>
+<tr><td>E3 设备动作谓词</td><td>播放/音量/导航/闹钟</td><td>A</td><td>中—强（反向）</td></tr>
+<tr><td>E4 话语衔接</td><td>承接系统上一句、补槽位</td><td><strong>B</strong></td><td>强（指向设备）</td></tr>
+<tr><td>E5 指代与省略</td><td>「它/这个」+ 前文实物</td><td>B</td><td>弱—中</td></tr>
+<tr><td>E6 言语行为</td><td>转述/引用/抱怨/复述</td><td><strong>B</strong></td><td>中（转述强指人）</td></tr>
+<tr><td>E7 互动标记</td><td>呼唤—应答对、称呼后停顿</td><td>A</td><td>强</td></tr>
+<tr><td>E8 话题与任务状态</td><td>槽位待填、话题延续</td><td><strong>C</strong></td><td>弱先验</td></tr>
+</tbody></table>
+<p>三条组合规律（可直接作规则基线或证据头的监督信号，来自该文档 §2）：</p>
+<ul>
+<li><code>E1 + E2</code> → 高置信 S1</li>
+<li><code>E3 + E4</code> → 高置信 S0</li>
+<li><code>E6（转述）+ E3</code> → <strong>仍是 S1</strong>（「他说把灯关了」不是让我关灯）——最容易翻车的一类</li>
+<li>只有 E5 或只有 E8 → 不得定案</li>
+</ul>
+<blockquote><p><strong>注意</strong>：这些证据在原文档里是从文本抽取的。在音频直入路线中，它们要么由<strong>证据头</strong>从隐状态预测（多任务辅助损失），要么从可选的 partial hypothesis 抽取。<strong>不能把「有没有 E1」当成唯一判据</strong>——真实 S1 里大量样本没有称呼（S1c 自语、S1e 商量后下令），这正是 B 层必须存在的原因。</p></blockquote>
+<h3>2.4 双头输出定义</h3>
+<table>
+<thead><tr><th>头</th><th>输出</th><th>取值</th><th>对应 v2 层级</th><th>说明</th></tr></thead><tbody>
+<tr><td><strong>head A</strong></td><td><code>addressee</code></td><td><code>device</code> / <code>person</code> / <code>self</code> / <code>broadcast</code></td><td><strong>L2 对象层</strong></td><td>四分类 posterior，逐 chunk 更新</td></tr>
+<tr><td><strong>head B</strong></td><td><code>actionability</code></td><td><code>[0,1]</code> 是否存在设备可执行动作</td><td><strong>L3 动作层</strong></td><td>与 head A 正交：<strong>对象对了也可能不该动</strong></td></tr>
+<tr><td>辅助头</td><td><code>turn_state</code></td><td><code>in_task</code> / <code>side_sequence</code> / <code>return_to_task</code> / <code>eot</code></td><td>L2+L3</td><td>驱动 §2.8 的恢复状态机</td></tr>
+<tr><td>辅助头</td><td><code>evidence</code></td><td>E1–E8 多标签</td><td>—</td><td>可解释性/审计；可作多任务监督</td></tr>
+</tbody></table>
+<p><strong>拒识判据</strong>（融合层，不是单点阈值）：</p>
+<pre class="ascii">reject = P(addressee ≠ device) &gt; θ_a
+       AND actionability &lt; θ_b
+       AND 累积证据通过迟滞（连续 K 个 chunk 稳定）</pre>
+<ul>
+<li>两个 θ 按<strong>场景分别标定</strong>（车舱 / 家居 / 眼镜分布不同，v2 §7.5 已强调阈值不能全局共用）<code>[设计]</code>。</li>
+<li><strong>两维齐报</strong>是防刷分的关键：只训一个「是否指令」的二分类，必然被高迷惑样本击穿，也必然靠关键词偷分。</li>
+<li>输出必须带证据 JSON（沿用已有文档 §3.4 的纪律）：<code>{"scene":"S1","p_addressee":0.11,"p_action":0.08,"evidence":["E1","E6"],"rule":"stream_v3"}</code>。</li>
+</ul>
+<h3>2.5 流式决策状态机</h3>
+<p>S1 的判据常出现在<strong>句中或后半句</strong>（「导航去…（转头）你带充电线没？」），单点决策必错。状态机：</p>
+<pre class="ascii">状态：LISTEN → HOLD_SUSPECT → PREPARE_RESPONSE → COMMIT / REVOKE
+      └─ SILENT（可逆）──────────────────────────┘
+
+逐 chunk t：
+  1. 编码音频 chunk_t，复用状态 KV
+  2. 双头出 posterior_t，累积证据 E_t = α·E_{t-1} + (1-α)·posterior_t
+  3. 迟滞判定：
+       E_t 进入 reject 区且连续 K 个 chunk 稳定 → HOLD_SUSPECT（下发「静默/继续听」）
+       E_t 进入 accept 区且连续 K 个 chunk 稳定 → PREPARE_RESPONSE（仅准备，不执行）
+       两者之间 → 保持当前状态，不下发新动作
+  4. 水印点：与语义 VAD 的附和/端点水印对齐，做一次中期融合（不阻塞）
+  5. EOT（由语义 VAD 给出）→ flush：
+       reject 稳定且 actionability 低 → SILENT / silent_record
+       accept 稳定且 actionability 高 且动作可逆性检查通过 → COMMIT
+       证据在句末翻转 → REVOKE：撤销已准备的响应，回到 SILENT
+  6. 任何时刻命中唤醒词 → 硬规则置位 S0，立即退出 SILENT</pre>
+<p><strong>三个必须实现的性质</strong>：</p>
+<table>
+<thead><tr><th>性质</th><th>原因</th><th>不实现的后果</th></tr></thead><tbody>
+<tr><td>累积 + 迟滞</td><td>单点 posterior 抖动大</td><td>一句话内反复切换状态，用户听到「半句回复」</td></tr>
+<tr><td><strong>可撤销</strong></td><td>称呼/转述标记常在句中偏后</td><td>已经开口才发现是说给旁人</td></tr>
+<tr><td>中间态只走可逆动作</td><td>见 §2.6</td><td>不可逆误执行</td></tr>
+</tbody></table>
+<h3>2.6 动作分级与不可逆保护</h3>
+<p>动作空间（与 v2 §7.5 的 CoDeTT 四动作可映射）：</p>
+<table>
+<thead><tr><th>动作</th><th>可逆性</th><th>触发条件</th><th>代价</th></tr></thead><tbody>
+<tr><td><code>silent</code></td><td>可逆</td><td>低置信默认</td><td>可能漏响应（FRR）</td></tr>
+<tr><td><code>silent_record</code></td><td>可逆</td><td>判定 S1 但需保留上下文</td><td>无</td></tr>
+<tr><td><code>backchannel</code></td><td>可逆</td><td>由语义 VAD 决定，非 sideTalk 职责</td><td>无</td></tr>
+<tr><td><code>clarify</code></td><td>可逆</td><td>两解且代价高</td><td>啰嗦（目标 ≤2%）</td></tr>
+<tr><td><code>prepare_response</code></td><td>可逆</td><td>双头 accept 但未 EOT</td><td>无</td></tr>
+<tr><td><code>respond</code></td><td><strong>部分不可逆</strong></td><td>EOT + 双头高置信</td><td>误响应</td></tr>
+<tr><td><code>execute_tool</code></td><td><strong>不可逆</strong></td><td>EOT + 双头高置信 + 动作可逆性检查</td><td><strong>误执行，一票否决</strong></td></tr>
+</tbody></table>
+<blockquote><p><strong>架构保证</strong>：把「误执行 = 0」写进 gate——<strong>不可逆动作必须同时满足 EOT、双头高置信、动作可逆性白名单</strong>，三个条件缺一不可。低置信一律降级到可逆动作。这比「训练时加惩罚」可靠得多，因为它是结构性约束而非统计性约束。</p></blockquote>
+<h3>2.7 与语义 VAD 的并发分工（C3）</h3>
+<table>
+<thead><tr><th>模块</th><th>回答</th><th>输出</th><th>时间轴</th></tr></thead><tbody>
+<tr><td>语义 VAD（≤1B）</td><td><strong>该不该现在说</strong>：话轮结束、附和点、停顿、抢话</td><td><code>eot</code> / <code>backchannel_point</code> / <code>pause</code> / 水印</td><td>逐 chunk，独立流</td></tr>
+<tr><td>sideTalk（≤7B，本文）</td><td><strong>这句话归不归我</strong>：受话人、可行动性</td><td><code>addressee</code> / <code>actionability</code> / <code>turn_state</code></td><td>逐 chunk，独立流</td></tr>
+<tr><td>融合 gate</td><td>最终动作</td><td>§2.6 的动作</td><td>水印对齐点 + EOT</td></tr>
+</tbody></table>
+<p><strong>接口契约</strong> <code>[设计]</code>：</p>
+<ol>
+<li>两流共享 <code>chunk_id</code> 与 <code>t_ms</code>，<strong>各自异步产出，不互相等待</strong>；</li>
+<li>只在<strong>水印点</strong>（VAD 给出的附和/端点候选时刻）做一次中期融合；</li>
+<li>最终融合在 <strong>VAD 的 EOT 事件</strong>上触发 flush；</li>
+<li>VAD 不负责对象判定，sideTalk 不负责时机判定——<strong>越界即产生「该沉默却回答」或「该答却被静默」</strong>；</li>
+<li>冲突时优先级：<code>唤醒词硬规则 &gt; EOT flush &gt; 双头 posterior &gt; 水印中期预判</code>。</li>
+</ol>
+<h3>2.8 拒识惯性与重新寻址检测（最易漏）</h3>
+<p>拒掉 S1 之后，用户常会回到设备：</p>
+<blockquote><p>「…（对副驾）你带充电线没？…（转回）<strong>行了，还是导航去机场</strong>」</p></blockquote>
+<p>若系统仍停在 SILENT，就是 <strong>FRR</strong>，而且是最伤体验的一类：用户会觉得「它突然聋了」。</p>
+<p><strong>恢复状态机</strong> <code>[设计]</code>：</p>
+<pre class="ascii">SILENT 状态下逐 chunk 检测重新寻址信号：
+  R1 唤醒词命中                      → 立即 S0（硬规则）
+  R2 话题回到 task_frame 域          → 提升 P(device)
+  R3 出现设备谓词 + 无 E1/E6 指向人  → 提升 P(device)
+  R4 与系统上一句形成承接（E4）      → 提升 P(device)
+  R5 silence_run_ms 超过阈值         → 逐步降低迟滞 K（更快响应）
+任一组合越过 accept 阈值 → 退出 SILENT，进入 PREPARE_RESPONSE</pre>
+<p><strong>评测必须包含「静默后恢复」用例</strong>，并把恢复失败计入 FRR 的独立切片（§4.5）。只报总体 FRR 会把这类失败淹没在大量正常 S0 里。</p>
+<h3>2.9 时延预算拆解（C4）</h3>
+<p>300ms 是<strong>每次流式判断</strong>的预算，不是端到端首响：</p>
+<table>
+<thead><tr><th>环节</th><th>预算 <code>[设计]</code></th><th>说明</th></tr></thead><tbody>
+<tr><td>音频 chunk 累积 + 编码器前向</td><td>40–60ms</td><td>20–40ms 帧</td></tr>
+<tr><td>状态 KV 复用（禁止全窗重算）</td><td>≤20ms</td><td>见 §2.2.2</td></tr>
+<tr><td>双头 + 证据头推理（≤7B 增量）</td><td>120–160ms</td><td>只出 posterior，<strong>不生成文本</strong></td></tr>
+<tr><td>累积证据 / 迟滞 / 水印融合</td><td>≤10ms</td><td>纯逻辑</td></tr>
+<tr><td>融合 gate + 动作下发</td><td>≤20ms</td><td></td></tr>
+<tr><td>云侧网络与调度余量</td><td>40–60ms</td><td></td></tr>
+<tr><td><strong>合计</strong></td><td><strong>≤300ms</strong></td><td>每个 chunk 持续给出</td></tr>
+</tbody></table>
+<blockquote><p>注意区分：最终判决在 EOT flush，可能跨越多个 chunk；但<strong>「静默 / 不执行」这个中间决策必须在 300ms 内持续给出</strong>——这正是 C4 的含义，也是流式架构相对「等整句再判」的价值。v2 §7.1 的 <code>P50 ≤390ms</code> 是<strong>静默决策延迟</strong>的对外口径，与 C4 是同一时间轴上的两个刻度。</p></blockquote>
+<h3>2.10 模型选型与训练要点</h3>
+<table>
+<thead><tr><th>项</th><th>建议 <code>[设计]</code></th><th>依据</th></tr></thead><tbody>
+<tr><td>规模</td><td>≤7B，音频编码器 + 轻量 LLM 头；只做分类/打分，不做生成</td><td>C5、C4</td></tr>
+<tr><td>结构</td><td>复用已预训练的音频-语言对齐表示；双头 + 证据多任务头</td><td>避免从零训</td></tr>
+<tr><td>状态注入</td><td>state tokens 常驻 KV，逐 chunk 增量更新</td><td>§2.2.2</td></tr>
+<tr><td>损失</td><td><code>L = L_addressee + λ1·L_action + λ2·L_evidence + λ3·L_consistency(最小对)</code></td><td>最小对一致性损失逼模型学对象而非词表</td></tr>
+<tr><td>校准</td><td>温度缩放；阈值按场景分别标定</td><td>已有文档 §3.4、v2 §7.5</td></tr>
+<tr><td>蒸馏</td><td>可用大模型离线打证据标签 → 蒸馏到 7B</td><td>证据可解释性靠辅助头保留</td></tr>
+</tbody></table>
+<p><strong>训练语料三条来源</strong>（SDO = 0 的现实下）：</p>
+<ol>
+<li><strong>真实多人录音</strong>（车舱/客厅），按 chunk 标注 addressee / actionability / 期望动作 / 时间戳；<strong>S1 与 S0 必须同人、同房间、同通道录制</strong>（v2 §7.2 与已有文档 §7.3 都把这条列为泄漏红线）。</li>
+<li><strong>合成最小对</strong>：同一文本改指向 / 改上一轮上下文 / 改呼语 / 改韵律；<strong>音频侧还要改头朝向、房间、叠加旁人语音</strong>（§3.5、附录 A）。</li>
+<li><strong>反事实扰动</strong>：删人名、换人名、把内容改成设备能力域、改语速、加旁人重叠、ASR 错字诱导（若使用 partial 辅助）。</li>
+</ol>
+<h3>2.11 失败模式清单</h3>
+<table>
+<thead><tr><th>#</th><th>失败模式</th><th>根因</th><th>检测切片</th><th>修法</th></tr></thead><tbody>
+<tr><td>F1</td><td>转述型误响应</td><td>「他说把灯关了」含完整指令</td><td>SEM6 / S1d</td><td>E6 证据头 + B 层</td></tr>
+<tr><td>F2</td><td>高迷惑同形误响应</td><td>文本与 S0 完全同形</td><td>全同形子集</td><td>状态缓存 + 最小对训练</td></tr>
+<tr><td>F3</td><td>称呼缺失型误响应</td><td>对家人说话但没称呼</td><td>S1c / S1e</td><td>不要依赖 E1</td></tr>
+<tr><td>F4</td><td>混合轮切分错</td><td>一句话里同时有人和设备</td><td>句内转向</td><td>分段 posterior + 撤销</td></tr>
+<tr><td>F5</td><td>隐式指代误判</td><td>「放那儿就行」</td><td>SEM12</td><td>task_frame 槽位特征</td></tr>
+<tr><td>F6</td><td><strong>拒识惯性</strong></td><td>静默后不恢复</td><td>静默后恢复切片</td><td>§2.8 状态机</td></tr>
+<tr><td>F7</td><td><strong>不可逆误执行</strong></td><td>低置信却执行了工具</td><td>误执行计数</td><td>§2.6 架构约束</td></tr>
+<tr><td>F8</td><td>承接句被吞</td><td>系统问答句被判旁白</td><td>FRR 切片</td><td>E4 权重提高</td></tr>
+<tr><td>F9</td><td>唤醒词漏识别</td><td>唤醒词 ASR 错</td><td>唤醒词变体集</td><td>前置硬规则</td></tr>
+<tr><td>F10</td><td>声纹/房间泄漏</td><td>S1 与 S0 录制条件不同</td><td>泄漏自检</td><td>同人同房间</td></tr>
+<tr><td>F11</td><td>韵律/DOA 泄漏</td><td>S1 全部提高音量或侧头录制</td><td>音频侧泄漏自检</td><td>平衡采集</td></tr>
+<tr><td>F12</td><td>过度沉默</td><td>学会闭嘴但不会分辨</td><td>always-mute 基线差值</td><td>成对报告拒识率 vs FRR</td></tr>
+</tbody></table>
+<hr>
+</section>
+<section id="s4">
+  <div class="folio">04</div>
+  <h2>3. 场景谱系</h2>
+<h3>3.1 七类 S1 子场景</h3>
+<blockquote><p>「动作」是期望输出；「难度」按<strong>句子本身像不像指令</strong>分，不按「有没有设备词」分。</p></blockquote>
+<table>
+<thead><tr><th>编号</th><th>子场景</th><th>主判据</th><th>典型样例</th><th>期望动作</th><th>难度</th></tr></thead><tbody>
+<tr><td><strong>S1a</strong></td><td>任务中插话（side sequence）</td><td>B 话题断裂 + 后续回归</td><td>「导航去…（转头）你带充电线没？（转回）…机场」</td><td>分段：插话静默 / 回归响应</td><td>中</td></tr>
+<tr><td><strong>S1b</strong></td><td>话轮后转向旁人</td><td>A 无寻址 + 设备域外</td><td>（指令完成后）「晚上吃啥」</td><td>静默，直到重新寻址</td><td>低</td></tr>
+<tr><td><strong>S1c</strong></td><td>自语 / 抱怨</td><td>B 无听者 + 情绪韵律</td><td>「这导航怎么又绕了」</td><td>静默（不写入任务状态）</td><td>中高</td></tr>
+<tr><td><strong>S1d</strong></td><td>转述设备的话 / 引述他人</td><td>E6 引语 + 第三人称</td><td>「它说前面堵车，咱绕一下」</td><td>静默</td><td>高</td></tr>
+<tr><td><strong>S1e</strong></td><td>先与旁人商量再下令</td><td>B 相邻轮指向翻转</td><td>「去哪个航站楼？…行，导航去 T3」</td><td>首轮静默 / 次轮响应</td><td><strong>极高</strong></td></tr>
+<tr><td><strong>S1f</strong></td><td>呼叫 / 唤起旁人</td><td>E1 呼语、E7 呼应对</td><td>「老王——」「哎」</td><td>静默</td><td>低</td></tr>
+<tr><td><strong>S1g</strong></td><td>电话 / 宠物 / 儿童</td><td>B 共同基础指向非设备第三方</td><td>「我一会儿回给你」「妈妈我要喝水」</td><td>静默</td><td>中</td></tr>
+</tbody></table>
+<p><strong>S1a 与 S1e 涉及时序边界，必须整段多轮评测，不能切成单句</strong>——切句就把最难的部分切没了。</p>
+<h3>3.2 与既有 SEM1–SEM12 的映射（复用资产）</h3>
+<p><code>S1语义拒识设计与用例覆盖.md</code> §4 的十二个子场景可无损映射到本文，评测集直接复用其用例：</p>
+<table>
+<thead><tr><th>SEM</th><th>内容</th><th>归入本文</th></tr></thead><tbody>
+<tr><td>SEM1 称呼 + 人—人动作</td><td>E1+E2</td><td>S1f / S1a</td></tr>
+<tr><td>SEM2 同形命令（对家人复述）</td><td>E3 + 无 E4</td><td><strong>高迷惑层</strong>（S1a/S1e）</td></tr>
+<tr><td>SEM3 指代递物</td><td>E5+E2</td><td>S1f / S1d</td></tr>
+<tr><td>SEM4 家务协调</td><td>E2×2</td><td>S1a</td></tr>
+<tr><td>SEM5 呼唤—应答</td><td>E7</td><td>S1f</td></tr>
+<tr><td>SEM6 转述/引用</td><td>E6+E3</td><td><strong>S1d（必做对）</strong></td></tr>
+<tr><td>SEM7 对第三人评论</td><td>无请求</td><td>S1c</td></tr>
+<tr><td>SEM8 电话/视频</td><td>通话语境</td><td>S1g</td></tr>
+<tr><td>SEM9 儿童对家长</td><td>儿童声线</td><td>S1g</td></tr>
+<tr><td>SEM10 self-talk 临界</td><td>无 E1/E2/E4</td><td><strong>self-talk 单列，不进 S1 分母</strong></td></tr>
+<tr><td>SEM11 混合轮</td><td>E1+E3 共存</td><td><strong>句内转向边界</strong>（S1a）</td></tr>
+<tr><td>SEM12 隐式指代</td><td>E2+E8</td><td>高迷惑层 / 需状态</td></tr>
+</tbody></table>
+<blockquote><p>该文档指出 <strong>SEM6 与 SEM11 是「必须做对否则全盘皆输」的两类</strong>，本文完全认同，并在 §2.5 用「可撤销 + 分段 posterior」专门对应。</p></blockquote>
+<h3>3.3 迷惑度四层：评测集的主体在哪里</h3>
+<table>
+<thead><tr><th>层</th><th>定义</th><th>样例</th><th>评测占比 <code>[设计]</code></th></tr></thead><tbody>
+<tr><td>低</td><td>明显无设备意图</td><td>「晚上吃啥」</td><td>15%</td></tr>
+<tr><td>中</td><td>含指人线索但无意图</td><td>「你带钥匙没」</td><td>20%</td></tr>
+<tr><td><strong>高</strong></td><td><strong>整句就是合法指令，但说给旁人 / 在商量 / 在转述</strong></td><td>「把空调调到 26 度」（冲客厅说）、「他说把灯关了」</td><td><strong>≥35%</strong></td></tr>
+<tr><td><strong>对抗</strong></td><td><strong>S0/S1 最小对，同一文本只改指向或上下文</strong></td><td>见 §3.5</td><td><strong>≥30%</strong></td></tr>
+</tbody></table>
+<p><strong>同形样本总占比 ≥30%</strong> 是已有文档 §6.2 的硬要求，本文沿用并加严：<strong>高迷惑 + 最小对合计 ≥65%</strong>。理由：如果随机采样真人语句，模型靠「有没有导航/空调关键词」就能刷到 95%+，而真实翻车全在那些「像指令却是说给别人听」的样本上。</p>
+<p>学术侧的同构证据是 ECHO 的 <strong>pair accuracy</strong>——论文全名 <em>Same Words, Different Actions: Paired Turn-Taking Evaluation under Rewritten Dialogue Contexts</em>，ECHO 是基准名而非标题 <code>[已核]</code>（v2 定稿 §2.2）。一对成员同时判对才得分，专门堵「固定动作策略」刷分。</p>
+<h3>3.4 边界与交叉</h3>
+<table>
+<thead><tr><th>边界</th><th>说明</th><th>评测要求</th></tr></thead><tbody>
+<tr><td>句内转向</td><td>一句话前半对设备、后半对人</td><td>分段标注 + 撤销率</td></tr>
+<tr><td>相邻轮翻转</td><td>S1e：一轮 S1、下一轮 S0</td><td>整段多轮，不切句</td></tr>
+<tr><td>S1 × S2 重叠</td><td>主用户转向旁人时旁人同时应答</td><td>单列冲突子集</td></tr>
+<tr><td>S1 → S0 恢复</td><td>拒识后回到设备</td><td><strong>静默后恢复切片</strong>（§2.8）</td></tr>
+<tr><td>S1 × S4</td><td>电视里的对话式台词</td><td>归 S4 对抗集，不进 S1 分母</td></tr>
+<tr><td>唤醒词硬规则</td><td>「小X，我妈说把灯关了」</td><td>归 S0，语义层不得否决</td></tr>
+</tbody></table>
+<h3>3.5 最小对构造法</h3>
+<p><strong>文本侧</strong>（复用已有文档 §6.1 的 MP1–MP8）：称呼有无、称呼对象（妈 / 小X）、直述 vs 转述、承接有无、谓词对象（遥控器 / 空调）、指代消解、混合轮切分、隐式指代。每组 ≥50 对（100 条），八组共 800 条，用 pair accuracy 判分。</p>
+<p><strong>音频侧</strong>（本文新增，音频直入路线特有）：</p>
+<table>
+<thead><tr><th>配对</th><th>固定</th><th>只改</th><th>检验</th></tr></thead><tbody>
+<tr><td>AP1 韵律</td><td>同一句「把空调关了」</td><td>平稳对设备 / 转头提高音量对副驾</td><td>是否只靠文本</td></tr>
+<tr><td>AP2 朝向</td><td>同一句</td><td>正面 / 侧头（空间模块作对照）</td><td>是否把 DoA 当主判据</td></tr>
+<tr><td>AP3 上下文音频</td><td>「26 度」</td><td>系统刚问「要几度」/ 系统在播报</td><td>状态缓存是否生效</td></tr>
+<tr><td>AP4 叠加旁人</td><td>同一句</td><td>纯净 / 旁人应答「好」</td><td>重叠鲁棒性</td></tr>
+<tr><td>AP5 静默时长</td><td>同一句</td><td>刚被寻址 / 已静默 30s</td><td>拒识惯性</td></tr>
+<tr><td>AP6 房间</td><td>同一句</td><td>近场 / 远场 / 车舱混响</td><td>房间泄漏</td></tr>
+<tr><td>AP7 句内转向</td><td>整段</td><td>保留 / 切掉转折后半句</td><td>分段与撤销</td></tr>
+<tr><td>AP8 恢复对</td><td>同一段</td><td>有 / 无回归 S0 的尾句</td><td>恢复率</td></tr>
+</tbody></table>
+<blockquote><p>音频侧最小对是本路线与文本路线的<strong>分水岭</strong>：只有它们能证明模型用的是语用+状态，而不是转写文本里的词表捷径。</p></blockquote>
+<hr>
+</section>
+<section id="s5">
+  <div class="folio">05</div>
+  <h2>4. 评测规范</h2>
+<h3>4.1 评测集构成</h3>
+<p>公开集不能直接测 S1（SDO 训练 = 0，测试仅 200 条，<code>[已核]</code>），必须自建，三条来源并行：</p>
+<table>
+<thead><tr><th>来源</th><th>内容</th><th>关键要求</th></tr></thead><tbody>
+<tr><td>真实多人录音</td><td>车舱 / 客厅 / 多人对话</td><td><strong>S1 与 S0 同人、同房间、同通道</strong>；系统 idle 与 speaking 分开录</td></tr>
+<tr><td>合成最小对</td><td>文本 MP1–MP8 + 音频 AP1–AP8</td><td>成对出现、标签必须翻转；pair accuracy 判分</td></tr>
+<tr><td>反事实扰动</td><td>删/换人名、改设备域、改韵律、加旁人重叠、ASR 错字、方言称呼</td><td>单独成集，测鲁棒性</td></tr>
+</tbody></table>
+<h3>4.2 组量与切片</h3>
+<p>沿用 v2 §7.2 的下限，加 S1 专项：</p>
+<table>
+<thead><tr><th>子集</th><th>条数 <code>[设计]</code></th><th>关键要求</th></tr></thead><tbody>
+<tr><td>S1 核心集（SDO）</td><td>500–1,000</td><td>声纹/音区与 S0 完全一致</td></tr>
+<tr><td>其中：高迷惑</td><td>≥35%</td><td>整句像指令但指向人</td></tr>
+<tr><td>其中：最小对</td><td>≥30%（MP + AP 合计 ≥800 条）</td><td>成对判分</td></tr>
+<tr><td>静默后恢复集</td><td>200 对</td><td>专测拒识惯性</td></tr>
+<tr><td>句内转向 / 混合轮</td><td>200</td><td>分段标注</td></tr>
+<tr><td>正控集（S0）</td><td>500</td><td>确保不是 always-mute</td></tr>
+<tr><td>self-talk 集</td><td>300</td><td><strong>单列，不并入 S1 分母</strong></td></tr>
+<tr><td>S2/S3/S4 边界回归</td><td>各 200</td><td>只做回归，不作为主指标</td></tr>
+<tr><td>对抗反例集</td><td>500</td><td>含指令式媒体台词、唤醒词变体、ASR 错字、方言称呼</td></tr>
+</tbody></table>
+<p><strong>切片</strong>：in-domain / 跨域（换一套产品能力域）/ 对抗最小对 / 长尾（方言、童声、远场、低 SNR、中英混说）。每场景 ≥500 条才报 Wilson CI。</p>
+<h3>4.3 标注规范：chunk 级，不逐句</h3>
+<p>300ms 是每次流式判断的时延（C4），<strong>静态句级评测完全测不到流式行为</strong>。每条标注到 chunk：</p>
+<pre class="ascii">{
+  &quot;id&quot;: &quot;s1_ap3_0012&quot;, &quot;t_ms&quot;: 420, &quot;chunk_ms&quot;: 40,
+  &quot;scene&quot;: &quot;S1&quot;, &quot;subscene&quot;: &quot;S1a&quot;, &quot;isomorph&quot;: &quot;full&quot;, &quot;pair_id&quot;: &quot;AP3_012&quot;,
+  &quot;addressee&quot;: &quot;person&quot;, &quot;actionability&quot;: 0.08,
+  &quot;expected_action&quot;: &quot;silent_record&quot;, &quot;irreversible&quot;: false,
+  &quot;evidence&quot;: [&quot;E1&quot;, &quot;E6&quot;],
+  &quot;sys_state&quot;: &quot;speaking&quot;, &quot;task_frame&quot;: &quot;nav_active&quot;, &quot;silence_run_ms&quot;: 0,
+  &quot;decision&quot;: {&quot;p_addressee&quot;: 0.11, &quot;p_action&quot;: 0.08, &quot;hysteresis&quot;: &quot;hold&quot;, &quot;revoked&quot;: false},
+  &quot;earliest_correct_ms&quot;: 260, &quot;recovered&quot;: true,
+  &quot;audio&quot;: {&quot;room&quot;: &quot;car_cabin&quot;, &quot;snr&quot;: 12, &quot;doa&quot;: &quot;off_axis&quot;, &quot;speaker&quot;: &quot;main&quot;, &quot;child&quot;: false}
+}</pre>
+<p>与已有文档 §8 句级标注 JSON 的差异：<strong>增加 <code>t_ms/chunk_ms</code>、流式决策字段（<code>hysteresis/revoked</code>）、<code>earliest_correct_ms</code>、<code>recovered</code>、<code>irreversible</code>、<code>audio</code> 声学条件</strong>。原有 <code>evidence</code> 多选、双标仲裁（场景 Kappa ≥0.75、证据 Kappa ≥0.65）、两解样本「主解+次解+软准确率」等纪律全部沿用。</p>
+<h3>4.4 覆盖矩阵（五正交维度）</h3>
+<pre class="ascii">覆盖 = 子场景(S1a–S1g) × 迷惑度(低/中/高/对抗)
+     × 上下文依赖(无 / 上一轮 / 多轮共同基础)
+     × 时序边界(句内转向 / 相邻轮翻转 / 静默后恢复 / 重叠)
+     × 环境(人数 / SNR / 距离通道 / 方言 / 童声 / 语速 / 系统状态)</pre>
+<p>任一格为空，报告里必须显式写「未覆盖」，不得用总体数字掩盖。</p>
+<h3>4.5 指标定义（分子 / 分母 / 方向 / 目标）</h3>
+<p><strong>A. 五项齐报</strong>（沿用 v2 §7.1，目标值一致）：</p>
+<table>
+<thead><tr><th>指标</th><th>分子</th><th>分母</th><th>方向</th><th>目标</th></tr></thead><tbody>
+<tr><td>分场景拒识率</td><td>正确静默的 S1 事件数</td><td>各子场景应静默事件数</td><td>↑</td><td>总体 ≥90% <code>[设计]</code>，<strong>S1a–S1g 各自报</strong>，带 Wilson CI</td></tr>
+<tr><td>FRR</td><td>被静默的 S0 事件数</td><td>S0 事件数（与访客指令分开）</td><td>↓</td><td>≤3%（内部 ≤2%）<code>[设计]</code></td></tr>
+<tr><td>误执行</td><td>不可逆动作误执行次数</td><td>应静默事件数</td><td>↓</td><td><strong>0</strong>（一票否决）；可逆动作单独计数</td></tr>
+<tr><td>静默决策延迟</td><td>—</td><td>应静默事件</td><td>↓</td><td>P50 ≤390ms（对齐 FDB stop latency）；每次判断 ≤300ms（C4）</td></tr>
+<tr><td>FA/hour</td><td>误响应次数</td><td>真实使用小时数</td><td>↓</td><td>运营监控</td></tr>
+</tbody></table>
+<p><strong>B. 语义层专项</strong>（复用已有文档 §1.2）：</p>
+<table>
+<thead><tr><th>指标</th><th>分母</th><th>目标 <code>[设计]</code></th><th>说明</th></tr></thead><tbody>
+<tr><td>同形子集拒识率</td><td>全同形子集</td><td>≥92%</td><td><strong>语义层唯一有意义的成绩</strong>；全集数字会被易样本拉高</td></tr>
+<tr><td>语义精确 / 召回</td><td>判静默样本 / S1 语义正例</td><td>≥90% / ≥95%</td><td>低精确会吞真指令</td></tr>
+<tr><td>clarify 率</td><td>全部事件</td><td>≤2%</td><td>高了用户嫌啰嗦</td></tr>
+<tr><td>pair accuracy</td><td>最小对总数</td><td>≥90%</td><td>两条都判对才计分（ECHO 口径）<code>[已核]</code></td></tr>
+</tbody></table>
+<p><strong>C. 流式增量</strong>（本文新增，必须报）：</p>
+<table>
+<thead><tr><th>指标</th><th>定义</th><th>目标 <code>[设计]</code></th><th>为什么必须有</th></tr></thead><tbody>
+<tr><td>最早正确判定时点</td><td>从事件起点到首次给出正确且稳定决策的时延，报 P50/P90</td><td>越早越好，且不晚于 EOT</td><td>静态分类评测完全测不到</td></tr>
+<tr><td>撤销正确率</td><td>发生证据翻转时正确撤销且最终判对的比例</td><td>≥95%</td><td>检验 §2.5 的可撤销机制</td></tr>
+<tr><td><strong>静默后恢复率</strong></td><td>拒识后回归 S0 且成功响应的比例</td><td>≥98%</td><td>拒识惯性是独立失败模式</td></tr>
+<tr><td>恢复 FRR</td><td>未恢复的 S0 数 / 拒识后回归 S0 事件数</td><td>≤2%</td><td>总体 FRR 会淹没这类失败</td></tr>
+</tbody></table>
+<h3>4.6 消融四组（证明语义层真的有用）</h3>
+<p>沿用已有文档 §7.1 的思路，改成音频直入路线的配置：</p>
+<table>
+<thead><tr><th>组</th><th>配置</th><th>目的</th></tr></thead><tbody>
+<tr><td>A</td><td>仅音频声学编码，无状态缓存、无语义头</td><td>下限：证明只靠声学在同形集上必然失败</td></tr>
+<tr><td>B</td><td>音频 + 双头，<strong>无对话状态缓存</strong></td><td>隔离出「状态」的贡献</td></tr>
+<tr><td>C</td><td>B + state tokens / KV 复用（<strong>目标配置</strong>）</td><td>与 B 的差值 = 语用条件的价值</td></tr>
+<tr><td>D</td><td>C + 动作分级 + 撤销 + 恢复状态机</td><td>证明可逆降级降低误执行与恢复失败</td></tr>
+</tbody></table>
+<p><strong>判读规则</strong>：必须分开报「全集拒识率」与「同形子集拒识率」。若 C 相对 B 在<strong>同形集</strong>上没有提升，说明状态没被用上（先查状态注入实现，别急着换模型）；若 D 相对 C 没有降低误执行，说明 gate 约束没生效。</p>
+<h3>4.7 泄漏自检</h3>
+<p>复用已有文档 §7.3 四条，加音频侧三条：</p>
+<table>
+<thead><tr><th>#</th><th>检查</th><th>判据</th></tr></thead><tbody>
+<tr><td>1</td><td>词表泄漏</td><td>LR / n-gram 基线 F1 &gt; 0.85 即说明「看到某个词就判」，同形样本不足</td></tr>
+<tr><td>2</td><td>称呼泄漏</td><td>S1 集称呼词占比 vs S0 集；真实场景也会说「小X，妈让你关灯」</td></tr>
+<tr><td>3</td><td>长度泄漏</td><td>S1 平均句长显著长于 S0 → 补短旁白</td></tr>
+<tr><td>4</td><td>说话人泄漏</td><td>S1 全由家人录、S0 全由机主录 → <strong>必须同人同房间</strong>（v2 §7.2 同款红线）</td></tr>
+<tr><td>5</td><td><strong>韵律泄漏</strong></td><td>S1 全部提高音量/侧头录制 → 平衡采集</td></tr>
+<tr><td>6</td><td><strong>房间/通道泄漏</strong></td><td>S1 与 S0 不同房间或不同麦 → 统一采集条件</td></tr>
+<tr><td>7</td><td><strong>DOA 泄漏</strong></td><td>模型把空间朝向当主判据 → AP2 对照集检验</td></tr>
+</tbody></table>
+<h3>4.8 防刷分与报告模板</h3>
+<p>沿用 v2 §7.4 三件套：<strong>always-mute / always-respond 双基线差值</strong>、<strong>配对反事实</strong>、<strong>cost-weighted 汇总</strong>（误响应与漏响应代价不对称，按场景标定权重，不等权平均）。</p>
+<p>每份评测报告必须包含：</p>
+<ol>
+<li>各子场景（S1a–S1g）拒识率 + Wilson CI，<strong>禁止只报总体</strong>；</li>
+<li>同形子集拒识率、高迷惑样本占比、最小对 pair accuracy；</li>
+<li>FRR（含恢复 FRR 切片）、误执行次数、静默决策延迟 P50/P90；</li>
+<li>消融四组数字齐全；</li>
+<li>泄漏自检七项全绿；</li>
+<li>每条数据的<strong>分母、场景标签（S0–S4）、系统状态、绝对值与相对值</strong>并报。</li>
+</ol>
+<blockquote><p><strong>产业侧对照提醒</strong>：厂商自报的数字几乎全是相对值或零数值（v2 §3、§5 已核），不可横向比较。自建评测集的价值就在于「同时给出分场景拒识率 + 真指令漏检率 + 误执行 + 时延」——<strong>没有任何公开基准同时给这四项</strong> <code>[已核]</code>（v2 摘要第 12 条）。</p></blockquote>
+<h3>4.9 与评测工装的映射</h3>
+<p>沿用 v2 §7.3 的 <code>tools/score.py</code> 现状：分场景拒识率（含 Wilson CI）、FAR/FRR、误执行、clarify 已实现；<strong>静默决策延迟、silence preservation、PRR/BIR、SMR/SE、FA/hour 待补</strong>。本文新增三项流式增量的实现依赖：</p>
+<table>
+<thead><tr><th>增量指标</th><th>依赖</th><th>优先级</th></tr></thead><tbody>
+<tr><td>最早正确判定时点</td><td>chunk 级事件时间戳</td><td>高（只依赖时间戳，成本最低）</td></tr>
+<tr><td>撤销正确率</td><td>逐 chunk 决策日志</td><td>中</td></tr>
+<tr><td>静默后恢复率</td><td>配对清单（S1→S0 段）</td><td>中</td></tr>
+</tbody></table>
+<hr>
+</section>
+<section id="s6">
+  <div class="folio">06</div>
+  <h2>5. 落地检查清单（go / no-go）</h2>
+<table>
+<thead><tr><th>#</th><th>检查项</th><th>通过条件</th></tr></thead><tbody>
+<tr><td>1</td><td>主链路不含 ASR 阻塞依赖</td><td>去掉 partial hypothesis 后性能下降可量化且可接受</td></tr>
+<tr><td>2</td><td>状态 KV 复用生效</td><td>每 chunk 无全窗重算，延迟预算达标</td></tr>
+<tr><td>3</td><td>双头齐报</td><td>addressee 与 actionability 分别有独立校准曲线</td></tr>
+<tr><td>4</td><td>可撤销机制</td><td>翻转样本上撤销正确率 ≥95%</td></tr>
+<tr><td>5</td><td>不可逆动作 gate</td><td>误执行 = 0（在对抗集上复验）</td></tr>
+<tr><td>6</td><td>与语义 VAD 并发</td><td>两流无互相等待；水印对齐点有日志</td></tr>
+<tr><td>7</td><td>恢复状态机</td><td>静默后恢复率 ≥98%</td></tr>
+<tr><td>8</td><td>同形子集</td><td>≥30% 占比，拒识率 ≥92%</td></tr>
+<tr><td>9</td><td>五项齐报 + 三条增量</td><td>报告模板字段齐全</td></tr>
+<tr><td>10</td><td>泄漏自检</td><td>七项全绿，双标 Kappa 达标</td></tr>
+<tr><td>11</td><td>消融四组</td><td>数字齐、C vs B 在同形集上有显著提升</td></tr>
+<tr><td>12</td><td>云侧 300ms SLO</td><td>每次流式判断 P95 ≤300ms</td></tr>
+</tbody></table>
+<hr>
+</section>
+<section id="s7">
+  <div class="folio">07</div>
+  <h2>6. 引用与来源</h2>
+<p>本文不新增外部来源。所有事实性数字与术语定义均引自 <code>sideTalk-技术洞察-2026Q4.md</code>（v2 定稿，其附录 C 的 S1–S65 来源清单已完成全量核查），主要包括：</p>
+<ul>
+<li>HumDial 拒识集 SDO 训练 = 0 / TPS = 1,210 / SDO 测试 = 200 <code>[已核]</code></li>
+<li>FDB v1.5 Gemini「对旁人说」Resume 0.99 vs「背景语音」Respond 0.70 <code>[已核]</code></li>
+<li>ECHO 论文全名与 pair accuracy 定义 <code>[已核]</code></li>
+<li>五项齐报目标值、评测集组量、<code>score.py</code> 映射现状（v2 §7）</li>
+<li>人类话轮交接基线 ~200ms、FDB 重入延迟 1.16–2.76s <code>[已核]</code></li>
+<li>四层问题结构 L1–L4、定义四世代、十二种术语（v2 §1）</li>
+</ul>
+<p>语义证据 E1–E8、SEM1–SEM12、MP1–MP8、标注 JSON、消融四组、泄漏四条，引自 <code>S1语义拒识设计与用例覆盖.md</code>（同目录）。凡本文标注 <code>[设计]</code> 的方案建议与目标值，均为本项目内部约定，不是外部事实。</p>
+<hr>
+</section>
+<section id="s8">
+  <div class="folio">08</div>
+  <h2>附录 A：评测用例样例集</h2>
+<table>
+<thead><tr><th>#</th><th>类型</th><th>用例</th><th>期望</th><th>关键差异</th></tr></thead><tbody>
+<tr><td>1</td><td>MP2</td><td>「小X，把盐递给我」/「妈，把盐递给我」</td><td>S0 / S1</td><td>唤醒词 vs 称呼</td></tr>
+<tr><td>2</td><td>MP3</td><td>「把灯关了」/「他说把灯关了」</td><td>S0 / S1</td><td>转述陷阱</td></tr>
+<tr><td>3</td><td>MP4</td><td>「26 度」（系统刚问）/「26 度」（冷启动）</td><td>S0 / 低置信</td><td>承接</td></tr>
+<tr><td>4</td><td>MP5</td><td>「把空调调到 26」/「把遥控器递我」</td><td>S0 / S1</td><td>谓词对象</td></tr>
+<tr><td>5</td><td>MP1</td><td>「把盐递给我」/「妈，把盐递给我」</td><td>? / S1</td><td>称呼有无</td></tr>
+<tr><td>6</td><td>MP6</td><td>「放桌上」（无前文）/「放桌上」（前文「这个」）</td><td>clarify / S1</td><td>指代消解</td></tr>
+<tr><td>7</td><td>MP7</td><td>「妈你等下——小X 声音小点」</td><td>前 S1 / 后 S0</td><td>混合轮切分</td></tr>
+<tr><td>8</td><td>MP8</td><td>「放那儿就行」（槽位待填 / 冷启动）</td><td>S0 / S1</td><td>隐式指代</td></tr>
+<tr><td>9</td><td>高迷惑</td><td>「把空调关了」（转头对副驾）</td><td>S1</td><td>全同形</td></tr>
+<tr><td>10</td><td>高迷惑</td><td>「导航去 T3」（在跟人商量行程）</td><td>S1</td><td>全同形</td></tr>
+<tr><td>11</td><td>高迷惑</td><td>「它说前面堵车，咱绕一下」</td><td>S1</td><td>转述 + 设备词</td></tr>
+<tr><td>12</td><td>高迷惑</td><td>「你先把歌单给我看看」</td><td>S1</td><td>设备名词 + 人—人谓词</td></tr>
+<tr><td>13</td><td>S1a</td><td>「导航去…（转头）你带充电线没？…机场」</td><td>分段静默 + 回归响应</td><td>句内转向</td></tr>
+<tr><td>14</td><td>S1e</td><td>「去哪个航站楼？」→「行，导航去 T3」</td><td>S1 → S0</td><td>相邻轮翻转</td></tr>
+<tr><td>15</td><td>S1c</td><td>「这导航怎么又绕了」</td><td>静默，不写任务状态</td><td>抱怨像指令</td></tr>
+<tr><td>16</td><td>S1b</td><td>（指令完成后）「晚上吃啥」</td><td>静默至重新寻址</td><td>话轮后转向</td></tr>
+<tr><td>17</td><td>S1f</td><td>「老王——」「哎，来了」</td><td>静默</td><td>呼应对</td></tr>
+<tr><td>18</td><td>S1g</td><td>「我一会儿回给你」（通话中）</td><td>静默</td><td>电话对端</td></tr>
+<tr><td>19</td><td>恢复</td><td>静默 20s 后「还是导航去机场吧」</td><td>退出 SILENT 并响应</td><td>拒识惯性</td></tr>
+<tr><td>20</td><td>硬规则</td><td>「小X，我妈说把灯关了」</td><td>S0（执行）</td><td>唤醒词优先</td></tr>
+<tr><td>21</td><td>AP1</td><td>同句改韵律（平稳 / 转头提高音量）</td><td>均须判对</td><td>韵律泄漏</td></tr>
+<tr><td>22</td><td>AP3</td><td>「26 度」改系统上一轮音频</td><td>均须判对</td><td>状态缓存</td></tr>
+<tr><td>23</td><td>AP4</td><td>同句叠加旁人应答「好」</td><td>均须判对</td><td>重叠鲁棒</td></tr>
+<tr><td>24</td><td>AP8</td><td>同段有 / 无回归 S0 尾句</td><td>恢复率对照</td><td>恢复状态机</td></tr>
+<tr><td>25</td><td>对抗</td><td>电视台词「把灯关了」</td><td>归 S4，不进 S1 分母</td><td>媒体人声</td></tr>
+<tr><td>26</td><td>对抗</td><td>ASR 错字「妈」→「马」</td><td>仍判 S1</td><td>鲁棒性</td></tr>
+<tr><td>27</td><td>对抗</td><td>方言称呼「阿妈」</td><td>仍判 S1</td><td>称呼词典</td></tr>
+<tr><td>28</td><td>正控</td><td>「小X，把音量调到 30」</td><td>S0</td><td>always-mute 基线</td></tr>
+</tbody></table>
+<blockquote><p>第 3、14、19 类是「语义无法单独定案、必须靠状态或恢复机制」的典型；它们不是坏样本，而是融合层与状态机的兵家必争之地，评测时单独成子集。</p></blockquote>
+<hr>
+</section>
+<section id="s9">
+  <div class="folio">09</div>
+  <h2>附录 B：术语表</h2>
+<table>
+<thead><tr><th>术语</th><th>含义</th></tr></thead><tbody>
+<tr><td>SDO</td><td>Speech Directed at Others，主用户临时转向他人说话（= 本文 S1）</td></tr>
+<tr><td>TPS</td><td>Third-party Speech，背景说话人插话</td></tr>
+<tr><td>DDSD</td><td>Device-Directed Speech Detection，二分类「是否对设备说」</td></tr>
+<tr><td>addressee</td><td>意图受话者，不等于说话人</td></tr>
+<tr><td>side sequence</td><td>会话分析中的插入性话轮，之后回到主话轮</td></tr>
+<tr><td>minimal pair</td><td>只改一个决定受话人的变量、标签翻转的样本对</td></tr>
+<tr><td>pair accuracy</td><td>一对成员同时判对才计分（ECHO）</td></tr>
+<tr><td>state tokens / KV 复用</td><td>对话状态常驻缓存，逐 chunk 增量更新，禁止全窗重算</td></tr>
+<tr><td>watermark</td><td>流式融合的中期对齐点，由语义 VAD 给出</td></tr>
+<tr><td>EOT flush</td><td>话轮结束时的最终判决与动作下发</td></tr>
+<tr><td>hysteresis</td><td>迟滞，要求证据连续稳定 K 个 chunk 才切换状态</td></tr>
+<tr><td>silent_record</td><td>判定静默但保留为上下文，不写入任务状态</td></tr>
+<tr><td>拒识惯性</td><td>拒识后系统停在 SILENT，导致回归 S0 被漏响应</td></tr>
+<tr><td>同形样本</td><td>文本/声纹/音区与 S0 完全一致、仅指向不同的样本</td></tr>
+</tbody></table>
+<hr>
+</section>
+<section id="s10">
+  <div class="folio">10</div>
+  <h2>附录 C：与既有 S1 文档的差异对照（输入假设冲突）</h2>
+<table>
+<thead><tr><th>维度</th><th><code>S1语义拒识设计与用例覆盖.md</code></th><th>本文</th><th>是否可混用</th></tr></thead><tbody>
+<tr><td>主输入</td><td>partial ASR 文本（≤300ms 首个可用片段）</td><td><strong>流式音频 chunk + 状态缓存</strong></td><td>❌ <strong>不可</strong></td></tr>
+<tr><td>与 C1/C2</td><td>不满足「不等 ASR / 音频直入」</td><td>满足</td><td>—</td></tr>
+<tr><td>语义来源</td><td>文本证据 E1–E8</td><td>音频隐状态 + 状态缓存；E1–E8 作证据头监督</td><td>✅ 资产可复用</td></tr>
+<tr><td>架构</td><td>三档：规则 / 小模型 / LLM 复核（异步）</td><td>双头流式 + 累积迟滞 + 可撤销</td><td>⚠️ 三档可作离线复核层</td></tr>
+<tr><td>空间信号</td><td>late fusion，语义优先</td><td>独立模块，仅弱先验</td><td>⚠️ 口径需对齐</td></tr>
+<tr><td>输出</td><td><code>P(addressed)</code> + 证据列表</td><td>addressee + actionability + turn_state</td><td>⚠️ 需映射</td></tr>
+<tr><td>标注粒度</td><td>句级 JSON</td><td><strong>chunk 级 + 流式决策字段</strong></td><td>❌ 阈值/指标不可共用</td></tr>
+<tr><td>指标</td><td>同形集准确率、语义召回/精确、clarify、语义耗时</td><td>五项齐报 + 流式增量</td><td>⚠️ 可并列报，不可合并</td></tr>
+<tr><td>评测集</td><td>MP1–MP8 文本最小对、SEM1–SEM12</td><td>上述资产 + <strong>AP1–AP8 音频侧最小对</strong></td><td>✅ 合并使用</td></tr>
+</tbody></table>
+<p><strong>结论</strong>：既有文档是<strong>语义证据层的优秀可操作化清单</strong>，本文是<strong>满足项目硬约束的主链路规范</strong>。建议把前者定位为「标注规范 / 证据词典 / 离线错误分析工具」，把本文定位为「在线链路与验收口径」，两者互补，但阈值、绝对值与评测分母必须各自独立。</p>
+<hr>
+</section>
+<section id="s11">
+  <div class="folio">11</div>
+  <h2>附录 D：未决事项</h2>
+<table>
+<thead><tr><th>#</th><th>事项</th><th>需要的输入</th></tr></thead><tbody>
+<tr><td>1</td><td>θ_a / θ_b / 迟滞 K / 累积系数 α 的具体取值</td><td>第一批 500 条标注后在验证集上标定</td></tr>
+<tr><td>2</td><td>状态缓存保留多少轮（N）</td><td>时延预算与长程依赖的权衡实验</td></tr>
+<tr><td>3</td><td>是否保留 partial hypothesis 作为辅助条件</td><td>消融 A/B 组差值决策</td></tr>
+<tr><td>4</td><td>证据头是否用大模型离线蒸馏标注</td><td>标注成本与可解释性收益评估</td></tr>
+<tr><td>5</td><td>不可逆动作白名单的具体范围</td><td>产品侧动作清单与代价分级</td></tr>
+<tr><td>6</td><td>跨域（换产品能力域）时的阈值迁移策略</td><td>第二个域的采集数据</td></tr>
+<tr><td>7</td><td>SMR / SE（理由正确性与隐私维度）何时纳入</td><td>二期，需意图标注与隐私探针</td></tr>
+</tbody></table>
+</section>
+<div class="colophon">
+  <div>S1 语义拒识设计与评测规范 · v1.0</div>
+  <div class="mono">2026-11-18 · docs/v2 · 独立文档</div>
+</div>
+</main>
+</div>
+</body>
+</html>
