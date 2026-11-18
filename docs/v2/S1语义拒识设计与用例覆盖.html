@@ -1,0 +1,1106 @@
+<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><title>S1 语义拒识：判定设计、场景清单与用例覆盖</title><style>
+body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;max-width:1080px;margin:32px auto;padding:0 20px;line-height:1.65;color:#1f2328;background:#fff}
+h1{font-size:26px;border-bottom:2px solid #e5e7eb;padding-bottom:8px}
+h2{font-size:21px;margin-top:32px;border-left:4px solid #2563eb;padding-left:10px}
+h3{font-size:17px;margin-top:22px;color:#111827}
+h4{font-size:15px;color:#374151}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px}
+th,td{border:1px solid #d1d5db;padding:6px 9px;text-align:left;vertical-align:top}
+th{background:#f3f4f6;font-weight:600}
+code{background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:12.5px}
+pre{background:#0f172a;color:#e2e8f0;padding:14px;border-radius:8px;overflow-x:auto;font-size:12.5px}
+pre code{background:none;color:inherit;padding:0}
+blockquote{border-left:4px solid #cbd5e1;margin:10px 0;padding:2px 14px;color:#4b5563}
+hr{border:none;border-top:1px solid #e5e7eb;margin:26px 0}
+</style></head><body><h1>S1 语义拒识：判定设计、场景清单与用例覆盖</h1>
+<blockquote>
+<p>版本 v1.0 · 2026-11-18 ｜ 上位文档（duplex-voice 仓库）：<code>docs/S1场景判定与评测用例设计.md</code>（总框架）、<code>docs/拒识sideTalk设计文档.md</code> §1.3（场景定义）<br />
+本篇只解决一件事：<strong>在"说话人是主用户"已确定之后，怎么用语义判断这句话指向谁</strong>——以及怎么测出这一步到底有没有用。</p>
+</blockquote>
+<hr />
+<h2>1. 语义层的位置：它只回答一个问题</h2>
+<h3>1.1 三层分工（不要越界）</h3>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>回答的问题</th>
+<th>输入</th>
+<th>失败后果</th>
+<th>能否单独成立</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>身份层（声纹）</td>
+<td>说话人是不是机主</td>
+<td>音频</td>
+<td>把家人当机主 / 把机主当访客</td>
+<td>能（S2/S3 的主判据）</td>
+</tr>
+<tr>
+<td><strong>语义层（本篇）</strong></td>
+<td><strong>这句话指向设备还是指向人</strong></td>
+<td>partial ASR 文本 + 会话上下文 + 系统状态</td>
+<td>把旁白当指令（误响应）/ 把指令当旁白（漏响应）</td>
+<td><strong>不能</strong>——S1 与 S0 文本同形，语义只能给概率</td>
+</tr>
+<tr>
+<td>空间层（DoA/近讲）</td>
+<td>说话人朝向谁</td>
+<td>多麦 / 双麦信号</td>
+<td>同上</td>
+<td>不能（朝向 ≠ 受话）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>三条硬规矩</strong>：</p>
+<ol>
+<li><strong>语义层不判"该不该现在说"</strong>——那是语义 VAD / 轮次决策的事（附和、停顿、抢话）。本文与 <code>docs/语义VAD方案.md</code> 的分工：那边管时机，本文管对象。</li>
+<li><strong>语义层不单独定案</strong>。它的输出是 <code>P(addressed)</code> + 证据列表，由融合层决定动作（见 §3.3）。</li>
+<li><strong>语义层必须可解释</strong>：每条判定要能吐出"因为出现了称呼 X、谓词 Y、且未承接系统上一句"——否则上线后无法定位误判。</li>
+</ol>
+<h3>1.2 语义拒识的目标指标（单独考核，不含声学）</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>定义</th>
+<th>目标</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>同形集准确率</td>
+<td>在"文本与 S0 完全同形"的子集上的判对率</td>
+<td>≥ 92%</td>
+<td><strong>这是语义层唯一有意义的成绩</strong>；全集的 90% 可能被易样本拉高</td>
+</tr>
+<tr>
+<td>语义召回（应静默被识别）</td>
+<td>S1 语义正例中判为"指向人"的比例</td>
+<td>≥ 95%</td>
+<td>与身份层串联后的端到端拒识率另算</td>
+</tr>
+<tr>
+<td>语义精确（判静默中真该静默）</td>
+<td>判为"指向人"的样本中真为 S1 的比例</td>
+<td>≥ 90%</td>
+<td>低了会吞真指令（FRR 上升）</td>
+</tr>
+<tr>
+<td>clarify 率</td>
+<td>语义低置信走确认的比例</td>
+<td>≤ 2%</td>
+<td>高了用户嫌啰嗦</td>
+</tr>
+<tr>
+<td>语义判定耗时</td>
+<td>partial ASR 首个可用片段 → 语义输出</td>
+<td>≤ 100 ms</td>
+<td>总静默预算 390 ms 内</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. 语义证据体系：八类证据，各有强弱</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>证据</th>
+<th>判据（可操作）</th>
+<th>典型句</th>
+<th>反例（易混）</th>
+<th>强度</th>
+<th>可单独定案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1</td>
+<td><strong>称呼 / 第二人称指称</strong></td>
+<td>出现"妈/爸/宝宝/老公/老婆/你/您/你们/老王"等<strong>人名或亲属称谓</strong>，且不在唤醒词典内</td>
+<td>"妈，把盐递我"</td>
+<td>"小X，把盐递我"（唤醒词，不是称呼）</td>
+<td>强</td>
+<td>能（+人—人谓词更稳）</td>
+</tr>
+<tr>
+<td>E2</td>
+<td><strong>人—人动作谓词</strong></td>
+<td>递/拿/放/收/抱/接/穿/吃/喂/哄/看孩子/帮我个忙</td>
+<td>"你先把衣服收了"</td>
+<td>"把音量收到 20"（设备动作）</td>
+<td>中—强</td>
+<td>不能单独</td>
+</tr>
+<tr>
+<td>E3</td>
+<td><strong>设备动作谓词</strong></td>
+<td>播放/暂停/下一首/音量/亮度/温度/导航/打电话/设闹钟/查天气</td>
+<td>"把空调调到 26 度"</td>
+<td>"把空调遥控器递我"（人对人）</td>
+<td>中—强（反向）</td>
+<td>不能单独</td>
+</tr>
+<tr>
+<td>E4</td>
+<td><strong>话语衔接</strong></td>
+<td>承接系统上一句（答句、补充槽位、追问）</td>
+<td>系统问"要几度？"→"26"</td>
+<td>冷启动说"26 度"</td>
+<td>强（指向设备）</td>
+<td>能（→ S0）</td>
+</tr>
+<tr>
+<td>E5</td>
+<td><strong>指代与省略</strong></td>
+<td>"它/这个/那个" + 前文有实物指称</td>
+<td>"这个帮我放桌上"</td>
+<td>"把它关了吧"（无前文，歧义）</td>
+<td>弱—中</td>
+<td>不能</td>
+</tr>
+<tr>
+<td>E6</td>
+<td><strong>言语行为</strong></td>
+<td>请求 / 命令 / 告知 / 抱怨 / 复述 / 转述</td>
+<td>"他说把灯关了"（转述）</td>
+<td>"把灯关了"（直述，对设备）</td>
+<td>中（转述强指人）</td>
+<td>转述可单列</td>
+</tr>
+<tr>
+<td>E7</td>
+<td><strong>互动标记</strong></td>
+<td>呼唤—应答对（"老张——""哎"）、称呼后停顿 ≥300 ms</td>
+<td>"老张——""哎，来了"</td>
+<td>"小X——"（唤醒）</td>
+<td>强</td>
+<td>能（呼应对）</td>
+</tr>
+<tr>
+<td>E8</td>
+<td><strong>话题与任务状态</strong></td>
+<td>当前槽位是否待填、话题是否延续</td>
+<td>待填"关哪个灯"→"客厅"</td>
+<td>无槽位时"客厅"</td>
+<td>弱（先验）</td>
+<td>不能</td>
+</tr>
+</tbody>
+</table>
+<p><strong>三条组合规律</strong>（规则基线可直接用）：</p>
+<ul>
+<li><strong>E1 + E2</strong> → 高置信 S1（覆盖多数 F1 类样本）</li>
+<li><strong>E3 + E4</strong> → 高置信 S0（覆盖真指令与答句）</li>
+<li><strong>E6（转述）+ E3</strong> → 仍是 S1（"他说把灯关了"不是让我关灯）——<strong>这是最容易翻车的一类</strong></li>
+<li><strong>只有 E5 或只有 E8</strong> → 不得定案，进 clarify</li>
+</ul>
+<hr />
+<h2>3. 判定架构：规则基线 → 小模型 → LLM 复核</h2>
+<h3>3.1 三档结构（按代价从低到高，按需触发）</h3>
+<pre><code>partial ASR 文本（≤300 ms 内首个可用片段）
+        │
+        ├─ 档 A｜规则基线（必跑，0 额外时延）
+        │     证据打分表（附录 A）→ score ∈ [-6, +6]
+        │     ├─ score ≥ +3  → P(addressed) 高 → 放行/正常响应
+        │     ├─ score ≤ -3  → 判 S1（指向人）
+        │     └─ 其余        → 档 B
+        │
+        ├─ 档 B｜小模型（文本分类器，≤40 ms）
+        │     输入：文本 + 结构化特征（是否有称呼/谓词类型/是否承接/系统状态）
+        │     输出：P(addressed) + 校准后的置信
+        │     ├─ P &lt; 0.3 且代价低 → silent_record
+        │     ├─ P &gt; 0.7          → 放行
+        │     └─ 中间              → 档 C 或 clarify
+        │
+        └─ 档 C｜LLM 复核（异步，不阻塞静默决策）
+              仅对&quot;低置信 + 高代价&quot;样本：含设备词但像转述、混合轮
+              输出证据化结论 + 建议动作，用于下一轮阈值标定与错误分析
+</code></pre>
+<p><strong>为什么这么分</strong>：档 A 覆盖 70%–80% 的清晰样本且可审计；档 B 处理同形与省略；档 C 处理"两解"与混合轮，并且<strong>永远不阻塞静默</strong>（异步）。</p>
+<h3>3.2 输入特征清单（档 B 用）</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>特征</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>称呼</td>
+<td>是否含亲属称谓 / 人名 / 你们；称谓位置（句首/句中）</td>
+<td>句首称呼更强</td>
+</tr>
+<tr>
+<td>谓词</td>
+<td>人—人谓词命中数、设备谓词命中数、二者共存</td>
+<td>共存 → 混合轮嫌疑</td>
+</tr>
+<tr>
+<td>人称</td>
+<td>第一/第二/第三人称主语</td>
+<td>"你"指向人；"小X"指向设备</td>
+</tr>
+<tr>
+<td>衔接</td>
+<td>与系统上一句的相似度、是否槽位补充、是否以"嗯/对/是的"开头</td>
+<td>强 S0 信号</td>
+</tr>
+<tr>
+<td>言语行为</td>
+<td>是否转述（"他说/她说/它说"）、是否疑问索取信息</td>
+<td>转述 → S1</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>系统 idle / speaking；当前是否有待填槽位</td>
+<td>与语义交叉</td>
+</tr>
+<tr>
+<td>上下文</td>
+<td>前 3 轮是否出现过该称呼、该物品</td>
+<td>消解省略</td>
+</tr>
+</tbody>
+</table>
+<h3>3.3 与声学/空间的融合（late fusion，不做特征拼接）</h3>
+<pre><code>P(addressed | sem, ac) ∝ P(sem | addressed) · P(ac | addressed) · P(addressed)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>情形</th>
+<th>语义</th>
+<th>声学/空间</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一致指向人</td>
+<td>指向人</td>
+<td>朝向偏离设备</td>
+<td><strong>S1（高置信）</strong></td>
+</tr>
+<tr>
+<td>一致指向设备</td>
+<td>指向设备</td>
+<td>正面朝向设备</td>
+<td><strong>S0</strong></td>
+</tr>
+<tr>
+<td>冲突</td>
+<td>指向人</td>
+<td>正面朝向设备</td>
+<td><strong>S1 + 低置信标记</strong>（人可能侧头说话），评测单列</td>
+</tr>
+<tr>
+<td>冲突</td>
+<td>指向设备</td>
+<td>明显偏离</td>
+<td><strong>clarify</strong>（不执行）</td>
+</tr>
+<tr>
+<td>都缺失</td>
+<td>低置信</td>
+<td>无空间信号</td>
+<td><strong>silent_record</strong>（宁可少说）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>纪律</strong>：声学置信只做<strong>先验调节</strong>，不做否决；语义也不否决唤醒词——唤醒词是硬规则（出现即 S0）。</p>
+<h3>3.4 校准与阈值</h3>
+<ul>
+<li>温度缩放（temperature scaling）在小模型输出上做一次，避免"高置信但错"。</li>
+<li>阈值按场景分别标定：家庭音箱（远场、多成员）与手机（近场、单人为主）的 <code>P</code> 分布不同，<strong>不能共用一个阈值</strong>。</li>
+<li>输出必须带证据 JSON：<code>{"scene":"S1","p":0.12,"evidence":["E1:妈","E2:递"],"rule":"A"}</code>——用于审计与错误归因。</li>
+</ul>
+<hr />
+<h2>4. 十二个语义子场景（S1-SEM）</h2>
+<blockquote>
+<p>每个子场景都要有正例、易混反例、以及"该靠哪几类证据"。表里的"动作"是期望输出。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>子场景</th>
+<th>判据（证据组合）</th>
+<th>典型句</th>
+<th>易混反例</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SEM1</td>
+<td>称呼 + 人—人动作</td>
+<td>E1 + E2</td>
+<td>"妈，把盐递给我"</td>
+<td>"小X，把盐递给我"（→S0）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM2</td>
+<td>同形命令（对家人复述）</td>
+<td>E3 + 无 E4 + 空间偏离</td>
+<td>"把空调调到 26 度"（冲客厅说）</td>
+<td>同句正对设备（→S0）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM3</td>
+<td>指代递物</td>
+<td>E5 + E2</td>
+<td>"这个给我"</td>
+<td>"这个放桌上"（无前文，→clarify）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM4</td>
+<td>家务协调</td>
+<td>E2×2 + E1 或缺省</td>
+<td>"你收衣服，我洗碗"</td>
+<td>"把洗衣机打开"（→S0）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM5</td>
+<td>呼唤—应答</td>
+<td>E7</td>
+<td>"老张——""哎"</td>
+<td>"小X——"（→S0）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM6</td>
+<td><strong>转述/引用</strong></td>
+<td>E6（他说/她说）+ E3</td>
+<td>"他说把灯关了"</td>
+<td>"把灯关了"（→S0）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM7</td>
+<td>对第三人评论</td>
+<td>E1/E6 + 无请求</td>
+<td>"这孩子又不吃饭"</td>
+<td>"再放一遍"（→S0）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM8</td>
+<td>电话/视频</td>
+<td>E6 + 语境（通话中）</td>
+<td>"我一会儿回给你"</td>
+<td>"小X，帮我挂断"（→S0）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM9</td>
+<td>儿童对家长</td>
+<td>E1 + 儿童声线</td>
+<td>"妈妈，我要喝水"</td>
+<td>"小X，讲故事"（→S0_guest）</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>SEM10</td>
+<td>self-talk 临界</td>
+<td>无 E1、无 E2、无 E4</td>
+<td>"钥匙放哪儿了……"</td>
+<td>"老公，钥匙放哪儿了"（→S1）</td>
+<td>silent（不记）</td>
+</tr>
+<tr>
+<td>SEM11</td>
+<td>混合轮</td>
+<td>E1 + E3 共存</td>
+<td>"妈你等一下——小X 声音小点"</td>
+<td>整句判 S1（错，会吞指令）</td>
+<td>分段：前 S1 / 后 S0</td>
+</tr>
+<tr>
+<td>SEM12</td>
+<td>隐式指代（无称呼但对我说）</td>
+<td>E2 + E8（槽位待填）</td>
+<td>"放桌上就行"（回应"放哪儿"）</td>
+<td>冷启动同句（→clarify）</td>
+<td>silent_record 或 clarify</td>
+</tr>
+</tbody>
+</table>
+<p><strong>SEM6 与 SEM11 是语义层唯一的两个"必须做对否则全盘皆输"的场景</strong>：前者是设备词出现在非指令里，后者是一句话里同时有人和设备。</p>
+<hr />
+<h2>5. 冲突消解：优先级与动作表</h2>
+<table>
+<thead>
+<tr>
+<th>冲突</th>
+<th>例子</th>
+<th>规则</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>唤醒词 vs 语义旁白</td>
+<td>"小X，我妈说把灯关了"</td>
+<td><strong>唤醒优先</strong>（硬规则）</td>
+<td>S0（执行关灯）</td>
+</tr>
+<tr>
+<td>承接系统 vs 指向人</td>
+<td>系统问"要几度"，用户回头对家人说"26 度"</td>
+<td><strong>承接为强 S0 信号</strong>，但若同时命中 E1 → 降置信</td>
+<td>S0 或 clarify</td>
+</tr>
+<tr>
+<td>转述 vs 设备指令</td>
+<td>"他说把灯关了"</td>
+<td><strong>转述一律 S1</strong>，哪怕含完整指令</td>
+<td>silent_record</td>
+</tr>
+<tr>
+<td>混合轮</td>
+<td>"妈你等下——小X 声音小点"</td>
+<td><strong>按"——/，小X"切分</strong>，分段判定</td>
+<td>前 S1 / 后 S0</td>
+</tr>
+<tr>
+<td>语义 vs 空间</td>
+<td>语义指向人，空间正面朝设备</td>
+<td>语义优先，标低置信</td>
+<td>S1（低置信）</td>
+</tr>
+<tr>
+<td>全低置信</td>
+<td>"把它关了吧"</td>
+<td>不得静默吞掉</td>
+<td>clarify</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. 用例覆盖：八组最小对 + 语义族矩阵</h2>
+<h3>6.1 用"最小对"而不是"多造样本"</h3>
+<p>最小对（minimal pair）= <strong>同一句话，只改一个决定受话人的变量</strong>。它直接回答"模型是在判对象，还是在判文本"。</p>
+<table>
+<thead>
+<tr>
+<th>配对</th>
+<th>固定</th>
+<th>只改</th>
+<th>期望</th>
+<th>检验</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MP1 称呼</td>
+<td>"把盐递给我"</td>
+<td>加/去"妈，"</td>
+<td>无称呼→?；有称呼→S1</td>
+<td>称呼是否是主证据</td>
+</tr>
+<tr>
+<td>MP2 称呼对象</td>
+<td>"把盐递给我，___"</td>
+<td>妈 / 小X</td>
+<td>S1 / S0</td>
+<td>是否区分称谓与唤醒词</td>
+</tr>
+<tr>
+<td>MP3 直述/转述</td>
+<td>"把灯关了"</td>
+<td>加"他说"</td>
+<td>S0 / S1</td>
+<td>转述陷阱</td>
+</tr>
+<tr>
+<td>MP4 承接</td>
+<td>"26 度"</td>
+<td>前有/无系统提问</td>
+<td>S0 / 低置信</td>
+<td>上下文依赖</td>
+</tr>
+<tr>
+<td>MP5 谓词</td>
+<td>"把<strong><em>递给我" / "把</em></strong>调到 26"</td>
+<td>遥控器 / 空调</td>
+<td>S1 / S0</td>
+<td>人—人 vs 设备谓词</td>
+</tr>
+<tr>
+<td>MP6 指代</td>
+<td>"放桌上"</td>
+<td>有/无前文指物</td>
+<td>S1 / clarify</td>
+<td>省略消解</td>
+</tr>
+<tr>
+<td>MP7 混合轮</td>
+<td>同句</td>
+<td>切分点前/后</td>
+<td>段1 S1 / 段2 S0</td>
+<td>分段能力</td>
+</tr>
+<tr>
+<td>MP8 隐式</td>
+<td>"放那儿就行"</td>
+<td>有/无待填槽位</td>
+<td>S1 / S0</td>
+<td>隐式指代</td>
+</tr>
+</tbody>
+</table>
+<p><strong>组量</strong>：每组 ≥ 50 对（即 100 条），八组共 800 条；配对判分用 <strong>pair accuracy</strong>（两条都对才计分）。</p>
+<h3>6.2 语义族 × 同形度矩阵（覆盖判据）</h3>
+<table>
+<thead>
+<tr>
+<th>子场景</th>
+<th>全同形</th>
+<th>半同形</th>
+<th>非同形</th>
+<th>每格下限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SEM1 称呼+动作</td>
+<td>"把盐递我"</td>
+<td>"妈，把盐递我"</td>
+<td>"妈帮我拿下那个"</td>
+<td>10</td>
+</tr>
+<tr>
+<td>SEM2 同形命令</td>
+<td>必须全同形</td>
+<td>—</td>
+<td>—</td>
+<td>30</td>
+</tr>
+<tr>
+<td>SEM3 指代递物</td>
+<td>"这个给我"</td>
+<td>"这个给我吧"</td>
+<td>"帮我拿下那个东西"</td>
+<td>10</td>
+</tr>
+<tr>
+<td>SEM4 家务协调</td>
+<td>—</td>
+<td>"你收衣服"</td>
+<td>"你先把衣服收了，我洗碗"</td>
+<td>10</td>
+</tr>
+<tr>
+<td>SEM5 呼唤—应答</td>
+<td>—</td>
+<td>—</td>
+<td>"老张——""哎"</td>
+<td>20（成对）</td>
+</tr>
+<tr>
+<td>SEM6 转述</td>
+<td>"他说把灯关了"</td>
+<td>"他说灯关一下"</td>
+<td>"刚你爸说把灯关了"</td>
+<td>15</td>
+</tr>
+<tr>
+<td>SEM7 评论</td>
+<td>—</td>
+<td>—</td>
+<td>"这孩子又不吃饭"</td>
+<td>10</td>
+</tr>
+<tr>
+<td>SEM8 电话</td>
+<td>"我一会儿回给你"</td>
+<td>—</td>
+<td>"我这边忙，回头说"</td>
+<td>10</td>
+</tr>
+<tr>
+<td>SEM9 儿童</td>
+<td>"妈妈我要喝水"</td>
+<td>"妈，喝水"</td>
+<td>"妈妈我渴了"</td>
+<td>10</td>
+</tr>
+<tr>
+<td>SEM10 self-talk</td>
+<td>"钥匙放哪儿了"</td>
+<td>—</td>
+<td>"钥匙呢……"</td>
+<td>10</td>
+</tr>
+<tr>
+<td>SEM11 混合轮</td>
+<td>"妈你等下——小X 声音小点"</td>
+<td>—</td>
+<td>同上换语序</td>
+<td>15</td>
+</tr>
+<tr>
+<td>SEM12 隐式</td>
+<td>"放桌上就行"</td>
+<td>"就放那儿"</td>
+<td>"你放那儿吧"</td>
+<td>10</td>
+</tr>
+</tbody>
+</table>
+<p><strong>同形样本总占比 ≥ 30%</strong>——低于这个比例，模型会靠词表捷径拿高分（见 §7.3）。</p>
+<h3>6.3 反例与对抗集（必须单独成集，不进 S1 分母）</h3>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>数量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S0 同形正例</td>
+<td>200</td>
+<td>与 SEM2 同句但正对设备</td>
+</tr>
+<tr>
+<td>唤醒词变体</td>
+<td>50</td>
+<td>"小X""小爱"等，含把称呼当唤醒词念的</td>
+</tr>
+<tr>
+<td>电视/短视频台词</td>
+<td>100</td>
+<td>含指令式台词（属 S4）</td>
+</tr>
+<tr>
+<td>语音消息外放</td>
+<td>50</td>
+<td>第三人的请求（属 S4/S2）</td>
+</tr>
+<tr>
+<td>ASR 错字诱导</td>
+<td>50</td>
+<td>"妈"→"马"、"递"→"地"，测鲁棒性</td>
+</tr>
+<tr>
+<td>方言/口音称呼</td>
+<td>50</td>
+<td>各地方言亲属称谓</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>7. 怎么证明"语义层真的有用"（消融四组）</h2>
+<h3>7.1 四组对照</h3>
+<table>
+<thead>
+<tr>
+<th>组</th>
+<th>配置</th>
+<th>目的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>仅声学/空间（无文本语义）</td>
+<td>下限：证明"只靠声学在同形集上必然失败"</td>
+</tr>
+<tr>
+<td>B</td>
+<td>仅语义（无空间）</td>
+<td>证明纯文本能走多远</td>
+</tr>
+<tr>
+<td>C</td>
+<td>语义 + 空间 late fusion</td>
+<td>目标配置</td>
+</tr>
+<tr>
+<td>D</td>
+<td>C + clarify 策略</td>
+<td>证明"可逆降级"降低了误吞的代价</td>
+</tr>
+</tbody>
+</table>
+<h3>7.2 必须分开报的两个数</h3>
+<ul>
+<li><strong>全集 S1 拒识率</strong>（易被非同形样本抬高）</li>
+<li><strong>同形子集拒识率</strong>（真正的难度所在）</li>
+</ul>
+<p>若 C 相对 B 在同形集上没有提升 → 说明空间信号没起作用或特征被语义淹没；若 B 相对 A 提升很小 → 说明语义特征没抓对（先去查标注，而不是换模型）。</p>
+<h3>7.3 泄漏自检（语义层特有）</h3>
+<ol>
+<li><strong>词表泄漏</strong>：训练 LR / n-gram 基线，F1 &gt; 0.85 即说明"看到某个词就判"，同形样本不足。</li>
+<li><strong>称呼泄漏</strong>：S1 集里称呼词占比 vs S0 集——若 S0 几乎没有称呼，模型会学"有称呼=旁白"（真实场景里用户也会说"小X，妈让你关灯"）。</li>
+<li><strong>长度泄漏</strong>：S1 平均句长显著长于 S0 → 补短旁白。</li>
+<li><strong>说话人泄漏</strong>：S1 全由家人录、S0 全由机主录 → 必须同人。</li>
+</ol>
+<hr />
+<h2>8. 标注规范：不只标场景，要标"证据"</h2>
+<p>每条样本的标注字段：</p>
+<pre><code class="language-json">{&quot;id&quot;:&quot;sem_mp3_0012&quot;,&quot;scene&quot;:&quot;S1&quot;,&quot;subscene&quot;:&quot;SEM6&quot;,&quot;action&quot;:&quot;silent_record&quot;,
+ &quot;evidence&quot;:[&quot;E6&quot;,&quot;E3&quot;],&quot;conf&quot;:&quot;H&quot;,&quot;isomorph&quot;:&quot;full&quot;,&quot;pair_id&quot;:&quot;MP3_012&quot;,
+ &quot;sys_state&quot;:&quot;idle&quot;,&quot;speaker&quot;:&quot;main&quot;,&quot;addressee&quot;:&quot;person_spouse&quot;,&quot;text&quot;:&quot;他说把灯关了&quot;}
+</code></pre>
+<ul>
+<li><strong>evidence 多选</strong>（E1–E8），必须至少标 1 个；标"无"说明该样本应有歧义（进 clarify 集）。</li>
+<li><strong>双标 + 仲裁</strong>：场景 Kappa ≥ 0.75；证据 Kappa ≥ 0.65（证据比场景更难一致，这是可接受的）。</li>
+<li><strong>两解样本</strong>：标"主解 + 次解"，主解计分，两解都对算软口径，单独报一个"软准确率"。</li>
+</ul>
+<hr />
+<h2>9. 错误类型学（用来做错误分析，不是用来写论文）</h2>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>类型</th>
+<th>触发条件</th>
+<th>检测方法</th>
+<th>修法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FA1</td>
+<td>称呼缺失型误响应</td>
+<td>对家人说话但没称呼</td>
+<td>混淆矩阵按 subscene 看</td>
+<td>补 E2 谓词特征</td>
+</tr>
+<tr>
+<td>FA2</td>
+<td>转述型误响应</td>
+<td>"他说把灯关了"</td>
+<td>单独看 SEM6 子集</td>
+<td>加转述规则</td>
+</tr>
+<tr>
+<td>FA3</td>
+<td>儿童声线</td>
+<td>儿童对家长</td>
+<td>按 speaker=child 切片</td>
+<td>补儿童语料</td>
+</tr>
+<tr>
+<td>FA4</td>
+<td>媒体台词</td>
+<td>电视里带指令</td>
+<td>按音频源切片（应为 S4）</td>
+<td>媒体检测前置</td>
+</tr>
+<tr>
+<td>FA5</td>
+<td>混合轮切分错</td>
+<td>"…——小X…"</td>
+<td>看 SEM11</td>
+<td>切分规则 + 标点</td>
+</tr>
+<tr>
+<td>FA6</td>
+<td>隐式指代</td>
+<td>"放那儿就行"</td>
+<td>看 SEM12</td>
+<td>槽位状态特征</td>
+</tr>
+<tr>
+<td>FA7</td>
+<td>方言称呼未识别</td>
+<td>"阿妈""老娘"</td>
+<td>按方言切片</td>
+<td>称呼词典扩充</td>
+</tr>
+<tr>
+<td>FA8</td>
+<td>ASR 错字</td>
+<td>"妈"→"马"</td>
+<td>错字诱导集</td>
+<td>模糊匹配 + 音近词典</td>
+</tr>
+<tr>
+<td>FR1</td>
+<td>承接句被吞</td>
+<td>系统问答句被判旁白</td>
+<td>看 FRR 切片</td>
+<td>承接权重提高</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td>唤醒词漏识别</td>
+<td>唤醒词 ASR 错</td>
+<td>唤醒词变体集</td>
+<td>唤醒词前置硬规则</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>10. 两周落地清单</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>产出</th>
+<th>验收</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1–D2</td>
+<td>证据打分表（附录 A）+ 规则基线 v0</td>
+<td>在同形集 ≥ 80%（规则基线不追求高，追求可解释）</td>
+</tr>
+<tr>
+<td>D3–D5</td>
+<td>500 条语义标注（含 8 组最小对的一半）</td>
+<td>双标 Kappa ≥ 0.75</td>
+</tr>
+<tr>
+<td>D6–D8</td>
+<td>小模型 baseline（LR → 0.5B 微调）</td>
+<td>同形集 ≥ 88%，混淆矩阵按 SEM 分层</td>
+</tr>
+<tr>
+<td>D9–D10</td>
+<td>late fusion（语义 + 空间）+ 阈值标定</td>
+<td>同形集 ≥ 92%，clarify ≤ 2%</td>
+</tr>
+<tr>
+<td>D11–D14</td>
+<td>消融四组 + 泄漏检查 + 错误归因报告</td>
+<td>四组数字齐、泄漏四项全绿</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>附录 A：规则基线打分表（可直接实现）</h2>
+<table>
+<thead>
+<tr>
+<th>证据</th>
+<th>命中条件</th>
+<th>分数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1 称呼</td>
+<td>句首出现亲属/人名（非唤醒词）</td>
+<td><strong>−3</strong></td>
+</tr>
+<tr>
+<td>E1' 唤醒词</td>
+<td>出现"小X/助手名"</td>
+<td><strong>+5</strong></td>
+</tr>
+<tr>
+<td>E2 人—人谓词</td>
+<td>递/拿/放/收/抱/接/喂/哄</td>
+<td><strong>−2</strong></td>
+</tr>
+<tr>
+<td>E3 设备谓词</td>
+<td>播放/音量/亮度/温度/导航/闹钟</td>
+<td><strong>+2</strong></td>
+</tr>
+<tr>
+<td>E4 承接系统</td>
+<td>与系统上一句相似 / 补槽位 / 以"嗯对是的"开头</td>
+<td><strong>+3</strong></td>
+</tr>
+<tr>
+<td>E6 转述</td>
+<td>"他说/她说/它说/刚你爸说"</td>
+<td><strong>−3</strong></td>
+</tr>
+<tr>
+<td>E5 指代</td>
+<td>有"这个/它"且前文有实物</td>
+<td><strong>−1</strong></td>
+</tr>
+<tr>
+<td>E8 槽位待填</td>
+<td>当前有未填槽位</td>
+<td><strong>+1</strong></td>
+</tr>
+<tr>
+<td>无任何证据</td>
+<td>—</td>
+<td><strong>0 → clarify</strong></td>
+</tr>
+</tbody>
+</table>
+<p>决策：<code>score ≤ −3</code> → S1；<code>score ≥ +3</code> → S0；中间 → 档 B（小模型）；档 B 仍在 [0.3, 0.7] → clarify。</p>
+<blockquote>
+<p>权重是起点不是结论：跑完 500 条标注后用逻辑回归重新拟合权重，并保留可解释性（每项权重打印出来）。</p>
+</blockquote>
+<hr />
+<h2>附录 B：20 条语义最小对示例</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>配对</th>
+<th>句 A（对设备）</th>
+<th>句 B（对人）</th>
+<th>关键差异</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>MP2</td>
+<td>小X，把盐递给我</td>
+<td>妈，把盐递给我</td>
+<td>唤醒词 vs 称呼</td>
+</tr>
+<tr>
+<td>2</td>
+<td>MP3</td>
+<td>把灯关了</td>
+<td>他说把灯关了</td>
+<td>转述</td>
+</tr>
+<tr>
+<td>3</td>
+<td>MP4</td>
+<td>26 度（系统刚问"要几度"）</td>
+<td>26 度（冷启动）</td>
+<td>承接</td>
+</tr>
+<tr>
+<td>4</td>
+<td>MP5</td>
+<td>把空调调到 26 度</td>
+<td>把遥控器递给我</td>
+<td>谓词对象</td>
+</tr>
+<tr>
+<td>5</td>
+<td>MP1</td>
+<td>把盐递给我</td>
+<td>妈，把盐递给我</td>
+<td>称呼有无</td>
+</tr>
+<tr>
+<td>6</td>
+<td>MP6</td>
+<td>放桌上（前文无物）</td>
+<td>放桌上（前文"这个"）</td>
+<td>指代消解</td>
+</tr>
+<tr>
+<td>7</td>
+<td>MP7</td>
+<td>妈你等下——小X 声音小点</td>
+<td>小X 声音小点</td>
+<td>混合轮切分</td>
+</tr>
+<tr>
+<td>8</td>
+<td>MP8</td>
+<td>放那儿就行（槽位待填）</td>
+<td>放那儿就行（冷启动）</td>
+<td>隐式指代</td>
+</tr>
+<tr>
+<td>9</td>
+<td>新</td>
+<td>帮我定个闹钟</td>
+<td>帮我拿一下闹钟</td>
+<td>谓词</td>
+</tr>
+<tr>
+<td>10</td>
+<td>新</td>
+<td>播放我的歌单</td>
+<td>把歌单给我看看</td>
+<td>谓词</td>
+</tr>
+<tr>
+<td>11</td>
+<td>新</td>
+<td>把音量调到 30</td>
+<td>把音量的事跟他说</td>
+<td>词同形不同义</td>
+</tr>
+<tr>
+<td>12</td>
+<td>新</td>
+<td>打开客厅灯</td>
+<td>让客厅那位把灯打开</td>
+<td>转述 + 人称</td>
+</tr>
+<tr>
+<td>13</td>
+<td>新</td>
+<td>下一首</td>
+<td>下一首我来放</td>
+<td>省略 vs 完整</td>
+</tr>
+<tr>
+<td>14</td>
+<td>新</td>
+<td>你今天怎么样（闲聊对设备）</td>
+<td>你今天怎么样（对家人）</td>
+<td>同句，靠空间/称呼</td>
+</tr>
+<tr>
+<td>15</td>
+<td>新</td>
+<td>妈，灯关了没</td>
+<td>小X，灯关了没</td>
+<td>称呼对象</td>
+</tr>
+<tr>
+<td>16</td>
+<td>新</td>
+<td>我一会儿回给你</td>
+<td>打我电话吧</td>
+<td>电话语境</td>
+</tr>
+<tr>
+<td>17</td>
+<td>新</td>
+<td>他说要关灯</td>
+<td>关灯</td>
+<td>转述</td>
+</tr>
+<tr>
+<td>18</td>
+<td>新</td>
+<td>帮我看着孩子</td>
+<td>帮我设个儿童模式</td>
+<td>谓词对象</td>
+</tr>
+<tr>
+<td>19</td>
+<td>新</td>
+<td>你先吃</td>
+<td>先播放新闻</td>
+<td>谓词</td>
+</tr>
+<tr>
+<td>20</td>
+<td>新</td>
+<td>把窗户打开</td>
+<td>开一下空调</td>
+<td>家居动作 vs 设备动作</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>说明：14 与 3 这两类是"语义无法单独判定"的典型，必须靠空间或承接信号——它们不是坏样本，而是<strong>融合层的兵家必争之地</strong>，评测时单独成子集。</p>
+</blockquote></body></html>
